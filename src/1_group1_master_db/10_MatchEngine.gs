@@ -235,13 +235,58 @@ function flushBatches_(factBatch, reviewBatch, successRows, failedRows) {
  * ✅ เขียน Batch ตรงทั้ง 3 ชีตเอง — เร็ว + ไม่มี circular dependency
  * ✅ รวม Canonical Name เข้า M_ALIAS ด้วย (เดิมข้าม → ทำให้ค้นไม่เจอ)
  */
+/**
+ * autoEnrichAliasesFromFactBatch_ — Single Writer Pattern สำหรับ M_ALIAS
+ * 
+ * ทำงานอัตโนมัติเมื่อมี Fact ใหม่ → สร้าง alias ใน:
+ *   1. M_ALIAS          — global alias (ทั้ง canonical + variant)
+ *   2. M_PERSON_ALIAS  — variant name (ถ้า ≠ canonical)
+ *   3. M_PLACE_ALIAS   — variant address (ถ้า ≠ canonical)
+ *
+ * ❌ ไม่เรียก createGlobalAlias() / syncAliasToEntityTable_()
+ * ❌ ไม่เรียก createPersonAlias() / createPlaceAlias()
+ * ✅ เขียน Batch ตรงทั้ง 3 ชีตเอง — เร็ว + ไม่มี circular dependency
+ * ✅ รวม Canonical Name เข้า M_ALIAS ด้วย (เดิมข้าม → ทำให้ค้นไม่เจอ)
+ */
 function autoEnrichAliasesFromFactBatch_(factBatch) {
   if (!factBatch || factBatch.length === 0) return;
+  
+  try {
+    // 1. เตรียมข้อมูล (Extract Data Loading)
+    var context = prepareAliasEnrichmentData_();
+    
+    // 2. ประมวลผลหา Alias ใหม่ (Extract Processing Logic)
+    var results = processFactRowsForAliases_(factBatch, context);
+    
+    // 3. บันทึกผลลงฐานข้อมูล (Extract Writing Logic)
+    commitAliasChanges_(results, context);
+    
+    // 4. Log
+    var totalGlobal = results.globalAliasRows.length;
+    var totalPerson = results.personAliasRows.length;
+    var totalPlace = results.placeAliasRows.length;
+    
+    if (totalGlobal > 0 || totalPerson > 0 || totalPlace > 0) {
+      logInfo('MatchEngine',
+        'Auto-Enrich (Single Writer v5.4.001): ' +
+        'M_ALIAS=' + totalGlobal +
+        ' M_PERSON_ALIAS=' + totalPerson +
+        ' M_PLACE_ALIAS=' + totalPlace
+      );
+    }
+  } catch (err) {
+    logError('autoEnrichAliasesFromFactBatch_', err.message, err);
+    throw err;
+  }
+}
 
+/**
+ * [Helper 1] โหลดและเตรียม Map ข้อมูลจาก Sheets
+ * @returns {Object} context object พร้อม entity maps และ alias sets
+ */
+function prepareAliasEnrichmentData_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-
-  // === 1. โหลดข้อมูลอ้างอิง ===
-
+  
   // Person map: personId → { canonical, normalized, masterUuid }
   var allPersons = loadAllPersons_();
   var personMap = {};
@@ -254,7 +299,7 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
       };
     }
   });
-
+  
   // Place map: placeId → { canonical, normalized, masterUuid }
   var allPlaces = loadAllPlaces_();
   var placeMap = {};
@@ -267,9 +312,9 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
       };
     }
   });
-
+  
   // === 2. โหลด Alias ที่มีอยู่แล้ว เพื่อ Dedup ===
-
+  
   // M_PERSON_ALIAS dedup: "personId::normalized"
   var existingPersonAliasSet = new Set();
   var existingPersonAliasData = loadAllAliases_();
@@ -279,7 +324,7 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
     var aNorm = normalizeForCompare(r[PERSON_ALIAS_IDX.ALIAS_NAME]);
     if (pId && aNorm) existingPersonAliasSet.add(pId + '::' + aNorm);
   });
-
+  
   // M_PLACE_ALIAS dedup: "placeId::normalized"
   var existingPlaceAliasSet = new Set();
   var existingPlaceAliasData = loadAllPlaceAliases_();
@@ -289,7 +334,7 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
     var aNorm = normalizeForCompare(r[PLACE_ALIAS_IDX.ALIAS_NAME]);
     if (plId && aNorm) existingPlaceAliasSet.add(plId + '::' + aNorm);
   });
-
+  
   // M_ALIAS dedup: "ENTITY_TYPE::masterUuid::normalized"
   var existingGlobalAliasSet = new Set();
   var mAliasSheet = ss.getSheetByName(SHEET.M_ALIAS);
@@ -305,27 +350,49 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
       }
     });
   }
+  
+  return {
+    ss: ss,
+    personMap: personMap,
+    placeMap: placeMap,
+    existingPersonAliasSet: existingPersonAliasSet,
+    existingPlaceAliasSet: existingPlaceAliasSet,
+    existingGlobalAliasSet: existingGlobalAliasSet,
+    mAliasSheet: mAliasSheet
+  };
+}
 
-  // === 3. สะสมแถวใหม่ ===
-
+/**
+ * [Helper 2] วนลูปตรวจสอบ Fact Rows และสร้าง Row ใหม่
+ * @param {Array} factBatch - แถวข้อมูลจาก M_FACT
+ * @param {Object} context - ข้อมูลที่เตรียมจาก prepareAliasEnrichmentData_()
+ * @returns {Object} results object พร้อม rows ใหม่ทั้ง 3 ประเภท
+ */
+function processFactRowsForAliases_(factBatch, context) {
+  var personMap = context.personMap;
+  var placeMap = context.placeMap;
+  var existingPersonAliasSet = context.existingPersonAliasSet;
+  var existingPlaceAliasSet = context.existingPlaceAliasSet;
+  var existingGlobalAliasSet = context.existingGlobalAliasSet;
+  
   var newGlobalAliasRows  = [];  // M_ALIAS
   var newPersonAliasRows  = [];  // M_PERSON_ALIAS
   var newPlaceAliasRows   = [];  // M_PLACE_ALIAS
   var now = new Date();
-
+  
   factBatch.forEach(function(r) {
     var pId           = String(r[FACT_IDX.PERSON_ID]    || '').trim();
     var plId          = String(r[FACT_IDX.PLACE_ID]      || '').trim();
     var rawPersonName = String(r[FACT_IDX.SHIP_TO_NAME]  || '').trim();
     var rawPlaceAddr  = String(r[FACT_IDX.SHIP_TO_ADDR]  || '').trim();
-
+    
     // ─── PERSON: Canonical + Variant ───
-
+    
     if (pId && personMap[pId]) {
       var pInfo        = personMap[pId];
       var masterUuid   = pInfo.masterUuid;
       var canonicalNorm = pInfo.normalized;
-
+      
       // 3a. Canonical Name → M_ALIAS (confidence 100, ต้องมีเพื่อให้ค้นเจอ)
       if (canonicalNorm && canonicalNorm.length >= 2) {
         var canonKey = 'PERSON::' + masterUuid + '::' + canonicalNorm;
@@ -343,12 +410,12 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
           ]);
         }
       }
-
+      
       // 3b. Variant Name (ShipToName) → M_ALIAS + M_PERSON_ALIAS
       if (rawPersonName && rawPersonName.length >= 2) {
         var rawNorm = normalizeForCompare(rawPersonName);
         if (rawNorm && rawNorm.length >= 2) {
-
+          
           // M_ALIAS variant
           var variantKey = 'PERSON::' + masterUuid + '::' + rawNorm;
           if (!existingGlobalAliasSet.has(variantKey)) {
@@ -364,7 +431,7 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
               true
             ]);
           }
-
+          
           // M_PERSON_ALIAS (เฉพาะ variant ≠ canonical)
           if (rawNorm !== canonicalNorm) {
             var paKey = pId + '::' + rawNorm;
@@ -383,14 +450,14 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
         }
       }
     }
-
+    
     // ─── PLACE: Canonical + Variant ───
-
+    
     if (plId && placeMap[plId]) {
       var plInfo         = placeMap[plId];
       var plMasterUuid   = plInfo.masterUuid;
       var plCanonicalNorm = plInfo.normalized;
-
+      
       // 3c. Canonical Name → M_ALIAS (confidence 100)
       if (plCanonicalNorm && plCanonicalNorm.length >= 2) {
         var plCanonKey = 'PLACE::' + plMasterUuid + '::' + plCanonicalNorm;
@@ -408,12 +475,12 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
           ]);
         }
       }
-
+      
       // 3d. Variant Address (ShipToAddr) → M_ALIAS + M_PLACE_ALIAS
       if (rawPlaceAddr && rawPlaceAddr.length >= 2) {
         var addrNorm = normalizeForCompare(rawPlaceAddr);
         if (addrNorm && addrNorm.length >= 2) {
-
+          
           // M_ALIAS variant
           var addrKey = 'PLACE::' + plMasterUuid + '::' + addrNorm;
           if (!existingGlobalAliasSet.has(addrKey)) {
@@ -429,7 +496,7 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
               true
             ]);
           }
-
+          
           // M_PLACE_ALIAS (เฉพาะ variant ≠ canonical)
           if (addrNorm !== plCanonicalNorm) {
             var plaKey = plId + '::' + addrNorm;
@@ -449,9 +516,27 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
       }
     }
   });
+  
+  return {
+    globalAliasRows: newGlobalAliasRows,
+    personAliasRows: newPersonAliasRows,
+    placeAliasRows: newPlaceAliasRows
+  };
+}
 
-  // === 4. Batch Write ทั้ง 3 ชีต ===
-
+/**
+ * [Helper 3] บันทึกข้อมูลลง Sheet ทั้ง 3 แบบ Batch
+ * @param {Object} results - ผลลัพธ์จาก processFactRowsForAliases_()
+ * @param {Object} context - Context ที่เตรียมไว้
+ */
+function commitAliasChanges_(results, context) {
+  var ss = context.ss;
+  var mAliasSheet = context.mAliasSheet;
+  
+  var newGlobalAliasRows = results.globalAliasRows;
+  var newPersonAliasRows = results.personAliasRows;
+  var newPlaceAliasRows = results.placeAliasRows;
+  
   // 4a. M_ALIAS
   if (newGlobalAliasRows.length > 0 && mAliasSheet) {
     mAliasSheet.getRange(
@@ -461,7 +546,7 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
     CacheService.getScriptCache().remove('M_GLOBAL_ALIAS_ALL');
     CacheService.getScriptCache().remove('M_GLOBAL_ALIAS_REVERSE');
   }
-
+  
   // 4b. M_PERSON_ALIAS
   if (newPersonAliasRows.length > 0) {
     var paSheet = ss.getSheetByName(SHEET.M_PERSON_ALIAS);
@@ -473,7 +558,7 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
       invalidateAliasCache_();
     }
   }
-
+  
   // 4c. M_PLACE_ALIAS
   if (newPlaceAliasRows.length > 0) {
     var plaSheet = ss.getSheetByName(SHEET.M_PLACE_ALIAS);
@@ -485,23 +570,7 @@ function autoEnrichAliasesFromFactBatch_(factBatch) {
       invalidatePlaceAliasCache_();
     }
   }
-
-  // === 5. Log ===
-
-  var totalGlobal = newGlobalAliasRows.length;
-  var totalPerson = newPersonAliasRows.length;
-  var totalPlace  = newPlaceAliasRows.length;
-
-  if (totalGlobal > 0 || totalPerson > 0 || totalPlace > 0) {
-    logInfo('MatchEngine',
-      'Auto-Enrich (Single Writer v5.4.001): ' +
-      'M_ALIAS=' + totalGlobal +
-      ' M_PERSON_ALIAS=' + totalPerson +
-      ' M_PLACE_ALIAS=' + totalPlace
-    );
-  }
 }
-
 // ============================================================
 // SECTION 2: processOneRow
 // ============================================================

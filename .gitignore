@@ -1,8 +1,9 @@
 ```
-# Google Apps Script specific
-*.gs.bak
-*.gs~
-*.bak
+# Google Apps Script specific ignores
+**/.gsproj
+**/.clasp.json
+**/.clasp.log
+**/appsscript.json.bak
 
 # Compiled/build artifacts
 *.pyc
@@ -14,6 +15,9 @@
 *.so
 *.a
 *.out
+build/
+dist/
+target/
 
 # Dependencies
 node_modules/
@@ -22,12 +26,9 @@ venv/
 __pycache__/
 .mypy_cache/
 .pytest_cache/
-target/
 .gradle/
-
-# Build/dist directories
-dist/
-build/
+julia-*/
+zig*/
 
 # Editor/IDE files
 .vscode/
@@ -43,10 +44,8 @@ Thumbs.db
 .env.local
 *.env.*
 
-# Logs
+# Logs and coverage
 *.log
-
-# Coverage
 coverage/
 htmlcov/
 .coverage
