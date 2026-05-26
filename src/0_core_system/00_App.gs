@@ -361,7 +361,7 @@ function safeRun(funcName, fn) {
   try {
     fn();
   } catch (err) {
-    logError(funcName, err.message);
+    logError(funcName, err.message || String(err), err);
     SpreadsheetApp.getUi().alert(
       `❌ ${funcName} ล้มเหลว:\n${err.message}`
     );
