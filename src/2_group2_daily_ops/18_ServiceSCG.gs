@@ -65,6 +65,8 @@
 
 function fetchDataFromSCGJWD() {  
   const ss = SpreadsheetApp.getActiveSpreadsheet();  
+  const startTime = new Date();
+  const TIME_LIMIT_MS = 5 * 60 * 1000; // 5 นาที (เผื่อเวลาให้ GAS 6 นาที)
   const ui = SpreadsheetApp.getUi();
 
   const lock = LockService.getScriptLock();  
@@ -122,42 +124,44 @@ function fetchDataFromSCGJWD() {
       (shipment.DeliveryNotes || []).forEach(n => { if (n.ShipToName) destSet.add(n.ShipToName); });  
       const destListStr = Array.from(destSet).join(", ");
 
-      (shipment.DeliveryNotes || []).forEach(note => {  
-        (note.Items || []).forEach(item => {  
-          const dailyJobId = note.PurchaseOrder + "-" + runningRow;  
-          const row = [  
-            dailyJobId,  
-            note.PlanDelivery ? new Date(note.PlanDelivery) : null,  
-            String(note.PurchaseOrder || ''),  
-            String(shipment.ShipmentNo || ''),  
-            shipment.DriverName || '',  
-            shipment.TruckLicense || '',  
-            String(shipment.CarrierCode || ''),  
-            shipment.CarrierName || '',  
-            String(note.SoldToCode || ''),  
-            note.SoldToName || '',  
-            note.ShipToName || '',  
-            note.ShipToAddress || '',  
-            (note.ShipToLatitude != null && note.ShipToLongitude != null) ? (note.ShipToLatitude + ", " + note.ShipToLongitude) : '',  
-            item.MaterialName || '',  
-            item.ItemQuantity || 0,  
-            item.QuantityUnit || '',  
-            item.ItemWeight || 0,  
-            String(note.DeliveryNo || ''),  
-            destSet.size,  
-            destListStr,  
-            "รอสแกน",  
-            "ยังไม่ได้ส่ง",  
-            "",  
-            0, 0, 0,  
-            "",  
-            "",  
-            (shipment.ShipmentNo || '') + "|" + (note.ShipToName || '')  
-          ];  
-          allFlatData.push(row);  
-          runningRow++;  
-        });  
-      });  
+        (shipment.DeliveryNotes || []).forEach(note => {
+          (note.Items || []).forEach(item => {
+            const dailyJobId = note.PurchaseOrder + "-" + runningRow;
+            // [FIX v5.4.004] ใช้ DATA_IDX.* แทน hardcode index ในการสร้าง row
+            const row = [];
+            row[DATA_IDX.JOB_ID] = dailyJobId;
+            row[DATA_IDX.PLAN_DELIVERY] = note.PlanDelivery ? new Date(note.PlanDelivery) : null;
+            row[DATA_IDX.INVOICE_NO] = String(note.PurchaseOrder || '');
+            row[DATA_IDX.SHIPMENT_NO] = String(shipment.ShipmentNo || '');
+            row[DATA_IDX.DRIVER_NAME] = shipment.DriverName || '';
+            row[DATA_IDX.TRUCK_LICENSE] = shipment.TruckLicense || '';
+            row[DATA_IDX.CARRIER_CODE] = String(shipment.CarrierCode || '');
+            row[DATA_IDX.CARRIER_NAME] = shipment.CarrierName || '';
+            row[DATA_IDX.SOLD_TO_CODE] = String(note.SoldToCode || '');
+            row[DATA_IDX.SOLD_TO_NAME] = note.SoldToName || '';
+            row[DATA_IDX.SHIP_TO_NAME] = note.ShipToName || '';
+            row[DATA_IDX.SHIP_TO_ADDR] = note.ShipToAddress || '';
+            row[DATA_IDX.LATLNG_SCG] = (note.ShipToLatitude != null && note.ShipToLongitude != null) ? (note.ShipToLatitude + ", " + note.ShipToLongitude) : '';
+            row[DATA_IDX.MATERIAL] = item.MaterialName || '';
+            row[DATA_IDX.QTY] = item.ItemQuantity || 0;
+            row[DATA_IDX.QTY_UNIT] = item.QuantityUnit || '';
+            row[DATA_IDX.WEIGHT] = item.ItemWeight || 0;
+            row[DATA_IDX.DELIVERY_NO] = String(note.DeliveryNo || '');
+            row[DATA_IDX.DEST_COUNT] = destSet.size;
+            row[DATA_IDX.DEST_LIST] = destListStr;
+            row[DATA_IDX.SCAN_STATUS] = "รอสแกน";
+            row[DATA_IDX.DELIVERY_STATUS] = "ยังไม่ได้ส่ง";
+            row[DATA_IDX.EMAIL] = "";
+            row[DATA_IDX.TOT_QTY] = 0;
+            row[DATA_IDX.TOT_WEIGHT] = 0;
+            row[DATA_IDX.SCAN_INV] = 0;
+            row[DATA_IDX.LATLNG_ACTUAL] = "";
+            row[DATA_IDX.OWNER_LABEL] = "";
+            row[DATA_IDX.SHOP_KEY] = (shipment.ShipmentNo || '') + "|" + (note.ShipToName || '');
+            allFlatData.push(row);
+            runningRow++;
+          });
+        });
     });
 
     // [FIX v5.4.002] แทนที่ hardcode index ด้วย DATA_IDX.*
@@ -214,6 +218,13 @@ function fetchDataFromSCGJWD() {
 
     console.log(`[SCG API] Successfully imported ${allFlatData.length} records.`);  
     ui.alert(`✅ ดึงข้อมูลสำเร็จ!\n- จำนวนรายการ: ${allFlatData.length} แถว\n- จับคู่พิกัด: เรียบร้อย`);
+    // Time Guard Check — แจ้งเตือนหากใช้เวลานาน
+    const elapsedMs = new Date() - startTime;
+    if (elapsedMs > TIME_LIMIT_MS) {
+      logWarn('ServiceSCG', `Time Guard Warning: fetchDataFromSCGJWD ใช้เวลา ${Math.round(elapsedMs/1000)} วินาที (เกิน ${TIME_LIMIT_MS/1000} วินาที)`);
+    } else {
+      console.log(`[SCG API] Total execution time: ${Math.round(elapsedMs/1000)} วินาที`);
+    }
 
   } catch (e) {  
     console.error("[SCG API Error]: " + e.message);  
