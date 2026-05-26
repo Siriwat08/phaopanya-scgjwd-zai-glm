@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Cross-Validation Report - LMDS V5.4.001</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Noto Sans SC', 'Noto Sans Thai', 'Segoe UI', sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1e293b;
+    background: #ffffff;
+  }
+  h1 { font-size: 22pt; color: #0f172a; margin-top: 0; border-bottom: 3px solid #3b82f6; padding-bottom: 8px; }
+  h2 { font-size: 16pt; color: #1e40af; margin-top: 28px; border-bottom: 1.5px solid #93c5fd; padding-bottom: 5px; }
+  h3 { font-size: 13pt; color: #334155; margin-top: 20px; }
+  .cover { text-align: center; padding-top: 120px; page-break-after: always; }
+  .cover h1 { font-size: 28pt; border: none; color: #1e40af; }
+  .cover .subtitle { font-size: 14pt; color: #64748b; margin-top: 12px; }
+  .cover .meta { font-size: 11pt; color: #94a3b8; margin-top: 40px; }
+  .cover .badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 12pt; font-weight: bold; margin-top: 30px; }
+  .badge-critical { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+  .badge-pass { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }
+  th { background: #1e40af; color: #fff; padding: 7px 10px; text-align: left; font-weight: 600; }
+  td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; }
+  tr:nth-child(even) { background: #f8fafc; }
+  .verdict-true { color: #16a34a; font-weight: bold; }
+  .verdict-false { color: #dc2626; font-weight: bold; }
+  .verdict-partial { color: #d97706; font-weight: bold; }
+  .severity-critical { background: #fef2f2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 9pt; }
+  .severity-high { background: #fff7ed; color: #9a3412; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 9pt; }
+  .severity-medium { background: #fefce8; color: #854d0e; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 9pt; }
+  .severity-low { background: #f0fdf4; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 9pt; }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 9.5pt; font-family: 'Sarasa Mono SC', monospace; color: #0f172a; }
+  pre { background: #1e293b; color: #e2e8f0; padding: 12px 16px; border-radius: 6px; font-size: 9pt; overflow-x: auto; line-height: 1.5; }
+  .finding-box { border-left: 4px solid; padding: 10px 14px; margin: 14px 0; border-radius: 0 6px 6px 0; background: #f8fafc; }
+  .finding-critical { border-left-color: #dc2626; }
+  .finding-high { border-left-color: #f97316; }
+  .finding-medium { border-left-color: #eab308; }
+  .finding-low { border-left-color: #22c55e; }
+  .score-bar { display: inline-block; height: 18px; border-radius: 3px; vertical-align: middle; }
+  .score-high { background: #22c55e; }
+  .score-mid { background: #eab308; }
+  .score-low { background: #ef4444; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  .page-break { page-break-before: always; }
+  .toc a { text-decoration: none; color: #1e40af; }
+  .toc a:hover { text-decoration: underline; }
+  .summary-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 10px 0; background: #f8fafc; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+  .emoji-icon { font-size: 14pt; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <h1>Cross-Validation Report</h1>
+  <div class="subtitle">LMDS V5.4.001 — 5 AI vs Code Reality</div>
+  <div style="margin-top: 20px; font-size: 12pt; color: #475569;">
+    ตรวจสอบทุกข้อกล่าวอ้างว่าถูกหรือผิด โดยอ้างอิงโค้ดจริงใน Repository<br>
+    เปรียบเทียบผลจาก Claude / Genspark / Zai / Minimax / Gemini
+  </div>
+  <div class="badge badge-critical">4 Critical Issues Confirmed</div>
+  <div class="badge badge-pass" style="margin-left: 8px;">1 Claim Corrected</div>
+  <div class="meta">
+    <p>ระบบ: Logistics Master Data System (LMDS) V5.4.001</p>
+    <p>จำนวนไฟล์: 22 .gs files (00_App.gs — 21_AliasService.gs)</p>
+    <p>วันที่วิเคราะห์: 2026-05-25</p>
+    <p>ผู้วิเคราะห์: Super Z (Independent Verification)</p>
+  </div>
+</div>
+
+<!-- ============ TOC ============ -->
+<div class="toc">
+  <h2>สารบัญ</h2>
+  <ol>
+    <li><a href="#sec1">Verdict Matrix — ประเด็นหลัก 10 จุด (ตรวจกับโค้ดจริง)</a></li>
+    <li><a href="#sec2">Verdict Score Board — คะแนน AI แต่ละรายการ</a></li>
+    <li><a href="#sec3">Critical Findings — ยืนยันจากโค้ดจริง</a></li>
+    <li><a href="#sec4">Claim Correction — ข้อที่รายงานเดิมพลาด</a></li>
+    <li><a href="#sec5">Additional Findings — สิ่งที่ Super Z พบเพิ่มเติม</a></li>
+    <li><a href="#sec6">คำแนะนำจาก Super Z</a></li>
+  </ol>
+</div>
+
+<!-- ============ SECTION 1 ============ -->
+<div class="page-break"></div>
+<h1 id="sec1">1. Verdict Matrix — ประเด็นหลัก 10 จุด</h1>
+<p>ตารางด้านล่างตรวจสอบทุกข้อกล่าวอ้างกับโค้ดจริงใน Repository ณ commit ล่าสุด</p>
+
+<table>
+<tr>
+  <th style="width:5%">#</th>
+  <th style="width:28%">ประเด็น</th>
+  <th style="width:8%">Claude</th>
+  <th style="width:8%">Genspark</th>
+  <th style="width:8%">Zai</th>
+  <th style="width:8%">Minimax</th>
+  <th style="width:8%">Gemini</th>
+  <th style="width:27%">ผลตัดสินจากโค้ดจริง</th>
+</tr>
+<tr>
+  <td><b>1</b></td>
+  <td><code>autoInstallSmartNav_()</code> ไม่มีใน codebase (กฎ 7)</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td><span class="verdict-true">Claude/Genspark/Zai ถูก</span> — Grep ยืนยันมีแค่ call site ใน <code>00_App.gs:89</code> ไม่มี definition ใดๆ</td>
+</tr>
+<tr>
+  <td><b>2</b></td>
+  <td><code>loadCachedGeoRows_()</code> ซ้ำ 2 ไฟล์</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td><span class="verdict-true">Claude/Genspark/Zai ถูก</span> — พบใน <code>16_GeoDictionaryBuilder.gs:322</code> และ <code>07_PlaceService.gs:638</code> (อ่านต่างกัน: 16 vs 4 คอลัมน์!)</td>
+</tr>
+<tr>
+  <td><b>3</b></td>
+  <td><code>updatePersonStats/PlaceStats/GeoStats()</code> ใช้ <code>setValue</code> row-by-row</td>
+  <td class="verdict-true">Critical</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-partial">คลุมเครือ</td>
+  <td><span class="verdict-true">Claude/Genspark/Zai/Minimax ถูก</span> — พบ <code>setValue()</code> ใน <code>06_PersonService.gs:341</code>, <code>07_PlaceService.gs:621</code>, <code>08_GeoService.gs:305</code>, <code>09_DestinationService.gs:190</code></td>
+</tr>
+<tr>
+  <td><b>4</b></td>
+  <td><code>MIGRATION_HybridAliasSystem()</code> ไม่มี Time Guard</td>
+  <td class="verdict-true">Critical</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td><span class="verdict-true">Claude/Genspark ถูก</span> — อ่านฟังก์ชันแล้วไม่มี <code>hasTimePassed_()</code>, <code>saveCheckpoint_()</code>, หรือ resume logic ใดๆ</td>
+</tr>
+<tr>
+  <td><b>5</b></td>
+  <td><code>18_ServiceSCG.gs</code> hardcode index <code>r[28]</code></td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-true">พบ</td>
+  <td class="verdict-false">PASS</td>
+  <td><span class="verdict-true">4 รายการถูก / Gemini ผิด</span> — พบ hardcode <code>r[28]</code>, <code>r[14]</code>, <code>r[16]</code>, <code>r[2]</code>, <code>r[9]</code>, <code>r[23]</code>, <code>r[24]</code>, <code>r[25]</code>, <code>r[27]</code></td>
+</tr>
+<tr>
+  <td><b>6</b></td>
+  <td>Single Writer violation (<code>populateAlias</code> ใน SCG)</td>
+  <td class="verdict-true">BUG-C1</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td><span class="verdict-true">เฉพาะ Claude พบ</span> — <code>fetchDataFromSCGJWD()</code> เรียก <code>populateAliasFromSCGRawData_()</code> ที่เขียน M_ALIAS โดยตรง ขัดกับ header ที่เขียนเอง</td>
+</tr>
+<tr>
+  <td><b>7</b></td>
+  <td><code>safeAlert_()</code> ซ้ำ 2 ไฟล์ (namespace)</td>
+  <td class="verdict-false">Low-4</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td class="verdict-false">ไม่พบ</td>
+  <td><span class="verdict-false">Claude ผิด!</span> — <code>13_ReportService.gs</code> มี <code>safeUiAlert_()</code> ไม่ใช่ <code>safeAlert_()</code> ชื่อต่างกัน ไม่มี namespace collision</td>
+</tr>
+<tr>
+  <td><b>8</b></td>
+  <td>No Fake Calls = PASS (Gemini/Minimax)</td>
+  <td class="verdict-false">ไม่เห็นด้วย</td>
+  <td class="verdict-false">ไม่เห็นด้วย</td>
+  <td class="verdict-false">ไม่เห็นด้วย</td>
+  <td class="verdict-false">PASS ผิด</td>
+  <td class="verdict-false">PASS ผิด</td>
+  <td><span class="verdict-false">Gemini/Minimax ตัดสินผิด</span> — <code>autoInstallSmartNav_()</code> คือ Fake Call ชัดเจน</td>
+</tr>
+<tr>
+  <td><b>9</b></td>
+  <td>No Hardcode Index = PASS (Gemini)</td>
+  <td class="verdict-false">ไม่เห็นด้วย</td>
+  <td class="verdict-false">ไม่เห็นด้วย</td>
+  <td class="verdict-false">ไม่เห็นด้วย</td>
+  <td class="verdict-false">ไม่เห็นด้วย</td>
+  <td class="verdict-false">PASS ผิด</td>
+  <td><span class="verdict-false">Gemini ตัดสินผิด</span> — มี hardcode index 9 ตำแหน่งใน <code>18_ServiceSCG.gs</code></td>
+</tr>
+<tr>
+  <td><b>10</b></td>
+  <td>"22 ไฟล์ไม่ใช้ Object Namespace เลย" (Zai)</td>
+  <td class="verdict-partial">Overclaim</td>
+  <td class="verdict-partial">ไม่เห็นด้วย</td>
+  <td class="verdict-false">Overclaim</td>
+  <td class="verdict-partial">ไม่เห็นด้วย</td>
+  <td class="verdict-true">Prefix = OK</td>
+  <td><span class="verdict-partial">Zai Overclaim</span> — กฎข้อ 8 อนุญาตให้ใช้ Prefix แทน Object ได้ <code>function personResolve_()</code> ใช้ prefix pattern ถูกต้อง</td>
+</tr>
+</table>
+
+<!-- ============ SECTION 2 ============ -->
+<div class="page-break"></div>
+<h1 id="sec2">2. Verdict Score Board — คะแนน AI แต่ละรายการ</h1>
+<p>คำนวณใหม่จากผลตรวจสอบโค้ดจริง (แก้ไขจากรายงานเดิมที่ประเด็น #7 ผิด)</p>
+
+<table>
+<tr>
+  <th>AI</th>
+  <th>ถูก</th>
+  <th>ผิด/พลาด</th>
+  <th>Overclaim</th>
+  <th>คะแนนรวม</th>
+  <th>Verdict</th>
+</tr>
+<tr>
+  <td><b>Claude</b></td>
+  <td>9/10</td>
+  <td>1</td>
+  <td>0</td>
+  <td><b>90%</b></td>
+  <td>แม่นยำที่สุด แต่ <code>safeAlert_</code> claim ผิด</td>
+</tr>
+<tr>
+  <td><b>Genspark</b></td>
+  <td>9/10</td>
+  <td>1</td>
+  <td>0</td>
+  <td><b>90%</b></td>
+  <td>ดีมาก พลาดแค่ Single Writer</td>
+</tr>
+<tr>
+  <td><b>Zai</b></td>
+  <td>8/10</td>
+  <td>1</td>
+  <td>1</td>
+  <td><b>75%</b></td>
+  <td>ดี แต่ Overclaim เรื่อง Namespace</td>
+</tr>
+<tr>
+  <td><b>Minimax</b></td>
+  <td>5/10</td>
+  <td>5</td>
+  <td>0</td>
+  <td><b>50%</b></td>
+  <td>พลาด Critical หลายจุด รวมทั้ง "No Fake Calls = 100%" ที่ผิดชัดเจน</td>
+</tr>
+<tr>
+  <td><b>Gemini</b></td>
+  <td>3/10</td>
+  <td>7</td>
+  <td>0</td>
+  <td><b>30%</b></td>
+  <td>Surface scan เท่านั้น ให้ PASS ในจุดที่ผิด 3 จุด</td>
+</tr>
+</table>
+
+<div class="finding-box finding-critical" style="margin-top: 20px;">
+  <b>หมายเหตุสำคัญจาก Super Z:</b> รายงานเดิมให้ Claude 100% แต่จริงๆ แล้วประเด็น #7 (<code>safeAlert_()</code> ซ้ำ) นั้น <b>ผิด</b> เพราะ <code>13_ReportService.gs</code> ใช้ชื่อ <code>safeUiAlert_()</code> ซึ่งต่างจาก <code>safeAlert_()</code> ใน <code>16_GeoDictionaryBuilder.gs</code> — ไม่มี namespace collision จริง ดังนั้นคะแนน Claude ต้องลดจาก 100% เหลือ 90%
+</div>
+
+<!-- ============ SECTION 3 ============ -->
+<div class="page-break"></div>
+<h1 id="sec3">3. Critical Findings — ยืนยันจากโค้ดจริง</h1>
+
+<h2>3.1 <span class="severity-critical">CRITICAL</span> BUG-C1: Single Writer Violation</h2>
+<div class="finding-box finding-critical">
+  <b>Location:</b> <code>18_ServiceSCG.gs</code> บรรทัด 202-208<br>
+  <b>สิ่งที่พบ:</b> <code>fetchDataFromSCGJWD()</code> เรียก <code>populateAliasFromSCGRawData_()</code> ซึ่งเขียน M_ALIAS โดยตรงผ่าน <code>createGlobalAlias()</code><br>
+  <b>ขัดกับ:</b> Header ของ <code>21_AliasService.gs</code> เองเขียนไว้ชัดเจน:
+</div>
+<pre>⚠️ Auto Pipeline ไม่เขียน M_ALIAS ที่นี่ — เขียนที่ autoEnrichAliasesFromFactBatch_() เท่านั้น</pre>
+<p>นี่คือการละเมิด Single Writer Pattern ที่ระบบเองกำหนดไว้ — <code>fetchDataFromSCGJWD()</code> เป็นส่วนหนึ่งของ auto pipeline (Group 2 Daily Ops) แต่เขียน M_ALIAS โดยไม่ผ่านช่องทางหลัก <code>autoEnrichAliasesFromFactBatch_()</code></p>
+<p><b>ผลกระทบ:</b> Race condition เมื่อ <code>fetchDataFromSCGJWD()</code> รันพร้อมกับ Group 1 Pipeline — Dedup Set ใน <code>autoEnrichAliasesFromFactBatch_()</code> โหลดก่อน แต่ <code>populateAliasFromSCGRawData_()</code> เพิ่ม record หลัง ทำให้สร้าง alias ซ้ำได้</p>
+
+<h2>3.2 <span class="severity-critical">CRITICAL</span> BUG-C2: loadCachedGeoRows_() ซ้ำ 2 ไฟล์ (เลวร้ายกว่าที่คิด)</h2>
+<div class="finding-box finding-critical">
+  <b>Location:</b> <code>16_GeoDictionaryBuilder.gs:322</code> และ <code>07_PlaceService.gs:638</code><br>
+  <b>สิ่งที่ร้ายแรงกว่าที่รายงานเดิมบอก:</b> ไม่ใช่แค่ namespace collision แต่สองเวอร์ชันอ่าน <b>ต่างจำนวนคอลัมน์</b>:
+</div>
+<pre>// 07_PlaceService.gs — อ่านแค่ 4 คอลัมน์
+const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+
+// 16_GeoDictionaryBuilder.gs — อ่านครบ 16 คอลัมน์ตาม SCHEMA
+const data = sheet.getRange(2, 1, ..., SCHEMA[SHEET.SYS_TH_GEO].length).getValues();
+</pre>
+<p>ถ้า GAS โหลด <code>07_PlaceService.gs</code> หลัง <code>16_GeoDictionaryBuilder.gs</code> — เวอร์ชันที่อ่าน 4 คอลัมน์จะทับเวอร์ชันที่อ่าน 16 คอลัมน์ ทำให้ <code>searchKey</code>, <code>postalKey</code>, <code>noteType</code>, <code>noteScope</code> หายไป — Address Enrichment จะผิดพลาด</p>
+
+<h2>3.3 <span class="severity-critical">CRITICAL</span> BUG-C3: updatePersonStats/PlaceStats/GeoStats ใช้ setValue() row-by-row</h2>
+<div class="finding-box finding-critical">
+  <b>Location:</b> <code>06_PersonService.gs:341</code>, <code>07_PlaceService.gs:621</code>, <code>08_GeoService.gs:305</code>, <code>09_DestinationService.gs:190</code><br>
+  <b>สิ่งที่พบ:</b> ทุกครั้งที่ AUTO_MATCH เกิดขึ้น จะเรียก Spreadsheet API 3 ครั้งต่อ entity (getValue + setValue x2)
+</div>
+<pre>sheet.getRange(targetRow, lastSeenCol).setValue(new Date());     // API call #1
+const currCount = Number(sheet.getRange(targetRow, usageCountCol).getValue()) || 0;  // API call #2
+sheet.getRange(targetRow, usageCountCol).setValue(currCount + 1); // API call #3</pre>
+<p>ถ้ามี 500 records ใน batch = 4,500 API calls เฉพาะ stats update → ติด Quota ได้ง่าย ขัดกฎข้อ 4 (Safe Batching)</p>
+
+<h2>3.4 <span class="severity-critical">CRITICAL</span> BUG-C4: MIGRATION_HybridAliasSystem() ไม่มี Time Guard</h2>
+<div class="finding-box finding-critical">
+  <b>Location:</b> <code>21_AliasService.gs</code> บรรทัด 451-547<br>
+  <b>สิ่งที่พบ:</b> ฟังก์ชันวน <code>forEach()</code> ถึง 4 รอบ ข้ามไฟล์ ไม่มี <code>hasTimePassed_()</code>, <code>saveCheckpoint_()</code>, หรือ resume logic
+</div>
+<p>ถ้า production data เกิน 5,000 rows = TIMEOUT แน่นอน = ข้อมูล M_ALIAS ค้างกึ่งกลาง ไม่มีทาง resume ได้ ขัดกฎข้อ 5 (Checkpoint &amp; Resume)</p>
+
+<!-- ============ SECTION 4 ============ -->
+<div class="page-break"></div>
+<h1 id="sec4">4. Claim Correction — ข้อที่รายงานเดิมพลาด</h1>
+
+<h2>4.1 <span class="severity-medium">CORRECTION</span> safeAlert_() ซ้ำ 2 ไฟล์ — ไม่จริง!</h2>
+<div class="finding-box finding-medium">
+  <b>รายงานเดิมกล่าว:</b> <code>safeAlert_()</code> ซ้ำใน <code>16_GeoDictionaryBuilder.gs</code> และ <code>13_ReportService.gs</code><br>
+  <b>ความจริงจากโค้ด:</b>
+</div>
+<table>
+<tr><th>ไฟล์</th><th>ชื่อฟังก์ชัน</th><th>บรรทัด</th><th>ซ้ำ?</th></tr>
+<tr><td><code>16_GeoDictionaryBuilder.gs</code></td><td><code>safeAlert_()</code></td><td>465</td><td>—</td></tr>
+<tr><td><code>13_ReportService.gs</code></td><td><code>safeUiAlert_()</code></td><td>221</td><td style="color: #16a34a; font-weight: bold;">ไม่ซ้ำ — ชื่อต่างกัน!</td></tr>
+</table>
+<p>ชื่อฟังก์ชันต่างกัน: <code>safeAlert_</code> vs <code>safeUiAlert_</code> — ไม่มี namespace collision ใน GAS เพราะ GAS ใช้ function name เป็น key ใน global scope โดยตรง</p>
+<p><b>อย่างไรก็ตาม:</b> ยังมีปัญหาความซ้ำซ้อนเชิงแนวคิด (conceptual duplication) — ทั้งสองทำหน้าที่เดียวกันคือ "แสดง alert อย่างปลอดภัยจาก trigger context" แต่ใช้ชื่อต่างกัน ควรรวมเป็นฟังก์ชันเดียวใน <code>14_Utils.gs</code></p>
+
+<h2>4.2 <span class="severity-medium">CLARIFICATION</span> updateStats() vs updatePersonStats()</h2>
+<p>รายงานเดิมใช้ชื่อ <code>updateStats()</code> ซึ่งไม่มีในโค้ดจริง ชื่อฟังก์ชันที่ถูกต้องคือ <code>updatePersonStats()</code>, <code>updatePlaceStats()</code>, <code>updateGeoStats()</code> — แต่ข้อกล่าวอ้างว่า "เรียก setValue row-by-row" นั้น <b>ถูกต้อง</b></p>
+
+<!-- ============ SECTION 5 ============ -->
+<div class="page-break"></div>
+<h1 id="sec5">5. Additional Findings — สิ่งที่ Super Z พบเพิ่มเติม</h1>
+<p>ปัญหาเหล่านี้ไม่ได้ถูกกล่าวถึงในรายงาน Cross-Validation ฉบับเดิม</p>
+
+<h2>5.1 <span class="severity-high">HIGH</span> createGlobalAlias() โหลด M_ALIAS ทั้งชีตทุกครั้ง — O(N) ต่อ call</h2>
+<div class="finding-box finding-high">
+  <b>Location:</b> <code>21_AliasService.gs:102</code><br>
+  <b>สิ่งที่พบ:</b> <code>createGlobalAlias()</code> เรียก <code>loadGlobalAliasesMap_()</code> ทุกครั้ง แล้วล้าง cache ทุกครั้งหลังเขียน
+</div>
+<pre>function createGlobalAlias(...) {
+  const existingMap = loadGlobalAliasesMap_();  // โหลด M_ALIAS ทั้งหมดทุกครั้ง
+  // ... dedup check ...
+  sheet.appendRow([...]);  // เขียน 1 row
+  CacheService.getScriptCache().remove('M_GLOBAL_ALIAS_ALL');  // ล้าง cache
+}</pre>
+<p>เมื่อ <code>populateAliasFromSCGRawData_()</code> เรียก <code>createGlobalAlias()</code> N ครั้ง = N cache loads + N cache invalidations = N sheet reads ถ้า cache miss → ประสิทธิภาพต่ำมาก</p>
+
+<h2>5.2 <span class="severity-high">HIGH</span> showVersionInfo() บอกจำนวนไฟล์ผิด</h2>
+<div class="finding-box finding-high">
+  <b>Location:</b> <code>00_App.gs:576</code><br>
+  <b>สิ่งที่พบ:</b> แสดง "21 files" แต่ระบบมีไฟล์ 00-21 = <b>22 files</b>
+</div>
+
+<h2>5.3 <span class="severity-high">HIGH</span> Entry Points หลายตัวไม่มี try-catch</h2>
+<p>จาก menu/trigger entry points พบหลายตัวที่ไม่มี try-catch ขัดกฎข้อ 12:</p>
+<ul>
+  <li><code>MIGRATION_HybridAliasSystem</code></li>
+  <li><code>applyMasterCoordinatesToDailyJob</code></li>
+  <li><code>assignMasterUuidIfMissing</code></li>
+  <li><code>buildFullQualityReport</code></li>
+  <li><code>clearAllSCGSheets_UI</code></li>
+  <li><code>detectDoubleProcessing</code></li>
+  <li><code>diagnoseSystemState</code></li>
+  <li><code>generatePersonAliasesFromHistory</code></li>
+  <li><code>installSmartNavTrigger</code></li>
+  <li><code>populateAliasFromSCGRawData_</code></li>
+  <li><code>populateGeoMetadata</code></li>
+  <li><code>runPreflightAudit</code></li>
+</ul>
+
+<h2>5.4 <span class="severity-medium">MEDIUM</span> logError() ไม่มี stack trace จริง</h2>
+<p><code>03_SetupSheets.gs</code> ฟังก์ชัน <code>logError()</code> รับเพียง module + message ไม่ได้เก็บ stack trace ทั้งที่ column สุดท้ายของ SYS_LOG เตรียมไว้แล้ว ขัดกฎข้อ 13</p>
+
+<h2>5.5 <span class="severity-medium">MEDIUM</span> SCG Cookie เก็บในชีต — Security Risk</h2>
+<p><code>18_ServiceSCG.gs:78</code> อ่าน cookie จากชีต Input ซึ่งเป็น sensitive data ถ้า spreadsheet ถูก share กว้างเกินไปจะรั่วไหลได้</p>
+
+<h2>5.6 <span class="severity-medium">MEDIUM</span> appendRow() ยังใช้หลายจุด</h2>
+<p>พบ <code>appendRow()</code> ใน:</p>
+<ul>
+  <li><code>03_SetupSheets.gs:365</code> (writeLog_)</li>
+  <li><code>06_PersonService.gs:284,302</code> (createPerson/createPersonAlias)</li>
+  <li><code>07_PlaceService.gs:568,583</code> (createPlace/createPlaceAlias)</li>
+  <li><code>09_DestinationService.gs:149</code> (createDestination)</li>
+  <li><code>13_ReportService.gs:164</code> (buildFullQualityReport)</li>
+  <li><code>15_GoogleMapsAPI.gs:311</code> (saveToSheetCache_)</li>
+  <li><code>21_AliasService.gs:115</code> (createGlobalAlias)</li>
+</ul>
+<p>ไม่ใช่ทุกจุดผิด (single call = acceptable) แต่ <code>createGlobalAlias()</code> ถูกเรียกใน loop ระหว่าง migration = ขัดกฎข้อ 4</p>
+
+<!-- ============ SECTION 6 ============ -->
+<div class="page-break"></div>
+<h1 id="sec6">6. คำแนะนำจาก Super Z</h1>
+
+<h2>6.1 Phase 0 — แก้ทันทีก่อน Deploy (Critical)</h2>
+
+<h3>FIX-C1: แก้ Single Writer Violation</h3>
+<p><b>วิธีที่แนะนำ:</b> ย้าย <code>populateAliasFromSCGRawData_()</code> call ออกจาก <code>fetchDataFromSCGJWD()</code> และให้ผู้ใช้เรียกผ่านเมนูเท่านั้น (เปลี่ยนจาก auto pipeline เป็น admin-only action)</p>
+<pre>// 18_ServiceSCG.gs — ลบส่วนนี้ออกจาก fetchDataFromSCGJWD()
+// [REMOVE] populateAliasFromSCGRawData_() call
+// ผู้ใช้สามารถเรียกได้จากเมนู "ดึงชื่อจาก SCG ดิบ → M_ALIAS" อยู่แล้ว</pre>
+
+<h3>FIX-C2: ลบ Duplicate loadCachedGeoRows_()</h3>
+<p>ลบ <code>loadCachedGeoRows_()</code> ใน <code>07_PlaceService.gs</code> ออก ให้ใช้ version ของ <code>16_GeoDictionaryBuilder.gs</code> เพียงที่เดียว (GAS Global Scope ทำให้เรียกข้ามไฟล์ได้อยู่แล้ว)</p>
+
+<h3>FIX-C3: แก้ Stats Update เป็น Batch Pattern</h3>
+<p>สะสม stat updates ไว้ใน memory array แล้ว batch write ท้าย batch แทนที่จะเรียก <code>setValue()</code> ทุก record</p>
+
+<h3>FIX-C4: เพิ่ม Time Guard + Resume ใน MIGRATION</h3>
+<p>เพิ่ม <code>hasTimePassed_()</code> check ทุก 100 iterations และใช้ <code>PropertiesService</code> เก็บ checkpoint (MIGRATION_STEP + MIGRATION_OFFSET) เพื่อ resume ได้</p>
+
+<h2>6.2 Phase 1 — แก้ภายใน Sprint (High)</h2>
+
+<h3>FIX-H1: เพิ่ม autoInstallSmartNav_() จริง หรือลบ call ออก</h3>
+<p>ทางเลือก:</p>
+<ol>
+  <li>ลบ call ออกจาก <code>onOpen()</code> — ให้ผู้ใช้ติดตั้งผ่านเมนูเท่านั้น</li>
+  <li>สร้างฟังก์ชันจริงที่ตรวจ trigger เดิมก่อนติดตั้งใหม่</li>
+</ol>
+
+<h3>FIX-H2: แก้ Hardcode Index ใน 18_ServiceSCG.gs</h3>
+<pre>// แทนที่ r[28] → r[DATA_IDX.SHOP_KEY]
+// แทนที่ r[14] → r[DATA_IDX.ITEM_QTY]
+// แทนที่ r[16] → r[DATA_IDX.ITEM_WEIGHT]
+// ... ฯลฯ</pre>
+
+<h3>FIX-H3: เพิ่ม try-catch ให้ Menu Entry Points</h3>
+<p>ทุกฟังก์ชันที่ถูกเรียกจากเมนูต้องมี try-catch + logError ตามกฎข้อ 12</p>
+
+<h3>FIX-H4: เพิ่ม Stack Trace ให้ logError()</h3>
+<p>แก้ <code>logError()</code> ให้รับ optional error object และเก็บ stack trace ลง column สุดท้ายของ SYS_LOG</p>
+
+<h2>6.3 Phase 2 — ปรับคุณภาพระยะกลาง (Medium)</h2>
+
+<h3>FIX-M1: รวม safeAlert_() และ safeUiAlert_() เป็นฟังก์ชันเดียว</h3>
+<p>ย้ายไป <code>14_Utils.gs</code> ใช้ชื่อ <code>safeUiAlert_()</code> และเรียกจากทุกไฟล์</p>
+
+<h3>FIX-M2: แก้ createGlobalAlias() ให้ batch write</h3>
+<p>เปลี่ยนจาก appendRow-per-call เป็นสะสม array แล้ว setValues() ท้าย batch</p>
+
+<h3>FIX-M3: แก้ showVersionInfo() จาก 21 → 22 files</p>
+
+<h3>FIX-M4: พิจารณาย้าย SCG Cookie ไปเก็บใน PropertiesService</h3>
+<p>ลดความเสี่ยง security จากการเก็บ cookie ในชีตที่อาจถูก share</p>
+
+<h2>6.4 สรุปผลกระทบ</h2>
+
+<table>
+<tr>
+  <th>Phase</th>
+  <th>จำนวน Fix</th>
+  <th>ผลกระทบต่อ Production</th>
+  <th>ความเร่งด่วน</th>
+</tr>
+<tr>
+  <td>Phase 0 (Critical)</td>
+  <td>4</td>
+  <td>ป้องกัน data corruption, race condition, timeout</td>
+  <td><span class="severity-critical">ทันที</span></td>
+</tr>
+<tr>
+  <td>Phase 1 (High)</td>
+  <td>4</td>
+  <td>ลด API quota risk, เพิ่ม debug capability</td>
+  <td><span class="severity-high">ภายใน 1 สัปดาห์</span></td>
+</tr>
+<tr>
+  <td>Phase 2 (Medium)</td>
+  <td>4</td>
+  <td>ปรับคุณภาพโค้ด ลด technical debt</td>
+  <td><span class="severity-medium">ภายใน 1 เดือน</span></td>
+</tr>
+</table>
+
+<div class="summary-card" style="margin-top: 24px;">
+  <h3 style="margin-top: 0; color: #1e40af;">Verdict สรุปจาก Super Z</h3>
+  <p><b>Gemini</b> — Surface scan เท่านั้น ให้ PASS ในจุดที่ผิด 3 จุด อย่าเชื่อถือผลนี้ในระดับ Production</p>
+  <p><b>Minimax</b> — อ่านโค้ดจริงบ้างแต่ไม่ลึกพอ พลาด Critical Bug 2 จุดที่สำคัญมาก และให้ "No Fake Calls = 100%" ที่ผิดชัดเจน</p>
+  <p><b>Zai</b> — ดีมาก แต่ Overclaim เรื่อง Namespace กฎข้อ 8 อนุญาต Prefix pattern ด้วย</p>
+  <p><b>Genspark</b> — ใกล้เคียงที่สุด พบ Critical issues เกือบครบ แต่พลาด Single Writer Pattern violation</p>
+  <p><b>Claude</b> — พบมากที่สุด รวมถึง Single Writer violation ที่ซ่อนลึก แต่มี 1 claim ผิด (<code>safeAlert_</code> ซ้ำ) ทำให้คะแนนจริงคือ 90% ไม่ใช่ 100%</p>
+</div>
+
+</body>
+</html>

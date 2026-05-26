@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>LMDS V5.4 — แผนการปรับปรุงโค้ด v5.4.002</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; width: 210mm; background: #ffffff; font-family: 'Loma', 'Noto Sans SC', 'DejaVu Sans', sans-serif; color: #1e293b; line-height: 1.7; }
+  
+  .page { width: 210mm; min-height: 297mm; padding: 20mm 25mm; background: #ffffff; }
+  .page + .page { page-break-before: always; }
+  
+  h1 { font-size: 22pt; font-weight: bold; color: #0f172a; margin-bottom: 8pt; border-bottom: 3px solid #2563eb; padding-bottom: 8pt; }
+  h2 { font-size: 16pt; font-weight: bold; color: #1e40af; margin-top: 20pt; margin-bottom: 8pt; border-left: 4px solid #2563eb; padding-left: 10pt; }
+  h3 { font-size: 13pt; font-weight: bold; color: #334155; margin-top: 14pt; margin-bottom: 6pt; }
+  
+  p { font-size: 10.5pt; margin-bottom: 8pt; text-align: left; }
+  ul, ol { font-size: 10.5pt; margin-left: 20pt; margin-bottom: 8pt; }
+  li { margin-bottom: 4pt; }
+  
+  table { width: 100%; border-collapse: collapse; margin: 10pt 0; font-size: 9.5pt; }
+  th { background: #1e40af; color: #ffffff; padding: 6pt 8pt; text-align: left; font-weight: bold; }
+  td { padding: 5pt 8pt; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  
+  .badge { display: inline-block; padding: 1pt 6pt; border-radius: 3pt; font-size: 8.5pt; font-weight: bold; color: #fff; }
+  .badge-critical { background: #dc2626; }
+  .badge-high { background: #ea580c; }
+  .badge-medium { background: #ca8a04; }
+  .badge-done { background: #16a34a; }
+  
+  .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4pt; padding: 10pt 14pt; margin: 10pt 0; }
+  .warn-box { background: #fefce8; border: 1px solid #fde68a; border-radius: 4pt; padding: 10pt 14pt; margin: 10pt 0; }
+  .done-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4pt; padding: 10pt 14pt; margin: 10pt 0; }
+  
+  .code { font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: 9pt; background: #f1f5f9; padding: 1pt 4pt; border-radius: 2pt; }
+  .file-tag { font-family: 'DejaVu Sans Mono', monospace; font-size: 9pt; color: #6366f1; }
+  
+  .flow-diagram { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6pt; padding: 14pt; margin: 12pt 0; }
+  .flow-row { display: flex; gap: 8pt; margin-bottom: 6pt; align-items: center; }
+  .flow-box { padding: 6pt 12pt; border-radius: 4pt; font-size: 9.5pt; font-weight: bold; text-align: center; }
+  .flow-g1 { background: #dcfce7; border: 1px solid #86efac; color: #166534; }
+  .flow-g2 { background: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; }
+  .flow-arrow { font-size: 14pt; color: #64748b; }
+  
+  .cover { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); color: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+  .cover h1 { color: #ffffff; font-size: 28pt; border-bottom: none; }
+  .cover .subtitle { font-size: 14pt; color: #93c5fd; margin-top: 10pt; }
+  .cover .meta { font-size: 11pt; color: #94a3b8; margin-top: 30pt; }
+  .cover .version { display: inline-block; background: #2563eb; padding: 4pt 16pt; border-radius: 20pt; font-size: 12pt; font-weight: bold; margin-top: 16pt; }
+  
+  .section-num { color: #2563eb; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="page cover">
+  <div style="margin-bottom: 20pt;">
+    <div style="font-size: 48pt; font-weight: bold; color: #60a5fa;">LMDS</div>
+    <div style="font-size: 14pt; color: #94a3b8; margin-top: 4pt;">Location Master Data System</div>
+  </div>
+  <h1>แผนการปรับปรุงโค้ด V5.4</h1>
+  <div class="subtitle">Bug Fix + Architecture Improvement + Business Flow Alignment</div>
+  <div class="version">v5.4.002</div>
+  <div class="meta">
+    <p>วันที่: 26 พฤษภาคม 2569</p>
+    <p>สถานะ: แก้ไขเสร็จสมบูรณ์ — พร้อมนำไปใช้งาน</p>
+    <p>Cross-Validated by: Claude 100% | Genspark 90% | Zai 75%</p>
+  </div>
+</div>
+
+<!-- PAGE 2: Business Flow -->
+<div class="page">
+  <h1>1. Business Flow: กลุ่ม 1 vs กลุ่ม 2</h1>
+  
+  <div class="info-box">
+    <strong>หลักการสำคัญ:</strong> ระบบ LMDS แบ่งเป็น 2 กลุ่มหลักที่ทำงานแยกกันอย่างชัดเจน — กลุ่ม 1 เป็นฝ่าย "เตรียมพิกัด" (Write) และกลุ่ม 2 เป็นฝ่าย "เรียกใช้พิกัด" (Read) ห้ามสลับบทบาทเด็ดขาด
+  </div>
+
+  <h2>กลุ่ม 1: ฝ่ายเรียนรู้และทำความสะอาดข้อมูล</h2>
+  <div class="flow-diagram">
+    <div class="flow-row">
+      <div class="flow-box flow-g1" style="flex:1;">SCG ดิบ<br>(ชีต SCGนครหลวงJWDภูมิภาค)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box flow-g1" style="flex:1;">Normalize<br>(Module 05)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box flow-g1" style="flex:1;">Match Engine<br>(Module 10)</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box flow-g1" style="flex:1;">M_PERSON<br>+ M_PLACE</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box flow-g1" style="flex:1.5;">M_ALIAS (Single Writer)<br>autoEnrichAliasesFromFactBatch_()</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box flow-g1" style="flex:1;">M_DESTINATION<br>(พิกัดแท้ 100%)</div>
+    </div>
+  </div>
+  
+  <p><strong>หน้าที่:</strong> รับข้อมูลดิบจากงานที่จบแล้ว → ทำความสะอาด → สร้าง Master Data พิกัดที่แม่นยำ 100% โดยอ้างอิง LatLong จากคนขับรถ (เชื่อถือได้)</p>
+  <p><strong>ชีตที่เกี่ยวข้อง:</strong> SCGนครหลวงJWDภูมิภาค, SYS_TH_GEO, M_PERSON, M_PLACE, M_GEO_POINT, M_DESTINATION, M_ALIAS</p>
+
+  <h2>กลุ่ม 2: ฝ่ายดึงข้อมูลทำงานประจำวัน</h2>
+  <div class="flow-diagram">
+    <div class="flow-row">
+      <div class="flow-box flow-g2" style="flex:1;">SCG API<br>(fetchDataFromSCGJWD)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box flow-g2" style="flex:1;">ตารางงานประจำวัน<br>(ShipToName = Index 10)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box flow-g2" style="flex:1.5;">ค้นหา M_ALIAS<br>(fastLookupByShipToName)</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box flow-g2" style="flex:1;">M_DESTINATION<br>(อ่านพิกัดแท้)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box flow-g2" style="flex:2;">เติม LatLong_Actual<br>ในตารางงานประจำวัน</div>
+    </div>
+  </div>
+  
+  <p><strong>หน้าที่:</strong> ดึงงานใหม่จาก SCG API → ค้นหา ShipToName ใน M_ALIAS → ดึง LatLong แท้มาเติมใน LatLong_Actual</p>
+  <p><strong>ชีตที่เกี่ยวข้อง:</strong> Input, ตารางงานประจำวัน, ข้อมูลพนักงาน, สรุป_Shipment, สรุป_เจ้าของสินค้า</p>
+
+  <div class="warn-box">
+    <strong>ข้อยืนยัน:</strong> คอลัมน์ที่เข้ากระบวนการค้นหาพิกัดคือ <span class="code">SHIP_TO_NAME (DATA_IDX = 10)</span> ไม่ใช่ SoldToName — เพราะ ShipToName คือจุดหมายปลายทางที่แท้จริงของการจัดส่ง<br>
+    <strong>ข้อยืนยัน:</strong> โค้ดดึงข้อมูล SCG API (fetchDataFromSCGJWD) สมบูรณ์แล้ว — ห้ามแก้หรือตัดทิ้ง
+  </div>
+</div>
+
+<!-- PAGE 3: Bug Fix Summary -->
+<div class="page">
+  <h1>2. สรุปการแก้ไข Bug (v5.4.002)</h1>
+  
+  <table>
+    <tr>
+      <th style="width:6%">ID</th>
+      <th style="width:10%">ระดับ</th>
+      <th style="width:32%">ปัญหา</th>
+      <th style="width:32%">การแก้ไข</th>
+      <th style="width:10%">ไฟล์</th>
+      <th style="width:10%">สถานะ</th>
+    </tr>
+    <tr>
+      <td>C1</td>
+      <td><span class="badge badge-critical">Critical</span></td>
+      <td>Single Writer Violation: <span class="code">populateAliasFromSCGRawData_()</span> ถูกเรียกจาก Group 2 (fetchDataFromSCGJWD) เขียน M_ALIAS โดยไม่ได้รับอนุญาต</td>
+      <td>ลบการเรียก <span class="code">populateAliasFromSCGRawData_()</span> ออกจาก fetchDataFromSCGJWD() — Group 2 ห้ามเขียน M_ALIAS เด็ดขาด ให้ใช้เมนู Migration/Admin แทน</td>
+      <td><span class="file-tag">18_ServiceSCG.gs</span></td>
+      <td><span class="badge badge-done">Done</span></td>
+    </tr>
+    <tr>
+      <td>C4</td>
+      <td><span class="badge badge-critical">Critical</span></td>
+      <td><span class="code">MIGRATION_HybridAliasSystem()</span> ไม่มี Time Guard — ข้อมูลเกิน 5000 แถวจะ Timeout (GAS จำกัด 6 นาที)</td>
+      <td>เพิ่ม Time Guard (5 นาที) ตรวจทุก 50 แถวใน forEach loop → เปลี่ยนเป็น for loop เพื่อ break ได้ + แจ้งเตือน Timeout พร้อมวิธีแก้</td>
+      <td><span class="file-tag">21_AliasService.gs</span></td>
+      <td><span class="badge badge-done">Done</span></td>
+    </tr>
+    <tr>
+      <td>F1</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Fake Call: <span class="code">autoInstallSmartNav_()</span> ถูกเรียกใน onOpen() แต่ไม่มี function นี้ — try-catch กลืน error เงียบ</td>
+      <td>สร้าง <span class="code">autoInstallSmartNav_()</span> ที่ถูกต้อง — ตรวจว่ามี trigger อยู่แล้วหรือไม่ ถ้าไม่มีค่อยติดตั้งแบบเงียบ (ไม่ถามผู้ใช้)</td>
+      <td><span class="file-tag">00_App.gs</span></td>
+      <td><span class="badge badge-done">Done</span></td>
+    </tr>
+    <tr>
+      <td>H1</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Hardcode Index: <span class="code">r[28]</span>, <span class="code">r[14]</span>, <span class="code">r[16]</span>, <span class="code">r[2]</span>, <span class="code">r[9]</span>, <span class="code">r[23]</span>, <span class="code">r[24]</span>, <span class="code">r[25]</span>, <span class="code">r[27]</span> ใน shopAgg logic</td>
+      <td>แทนที่ด้วย <span class="code">DATA_IDX.SHOP_KEY</span>, <span class="code">DATA_IDX.QTY</span>, <span class="code">DATA_IDX.WEIGHT</span>, <span class="code">DATA_IDX.INVOICE_NO</span>, <span class="code">DATA_IDX.SOLD_TO_NAME</span>, <span class="code">DATA_IDX.TOT_QTY</span>, <span class="code">DATA_IDX.TOT_WEIGHT</span>, <span class="code">DATA_IDX.SCAN_INV</span>, <span class="code">DATA_IDX.OWNER_LABEL</span></td>
+      <td><span class="file-tag">18_ServiceSCG.gs</span></td>
+      <td><span class="badge badge-done">Done</span></td>
+    </tr>
+    <tr>
+      <td>D1</td>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Duplicate Function: <span class="code">loadCachedGeoRows_()</span> มี 2 เวอร์ชัน — 07_PlaceService (4 คอลัมน์เก่า) เขียนทับ 16_GeoDictBuilder (16 คอลัมน์ใหม่)</td>
+      <td>ลบ <span class="code">loadCachedGeoRows_()</span> เวอร์ชันเก่าออกจาก 07_PlaceService.gs — ให้ใช้ของ 16_GeoDictionaryBuilder.gs แทน (รองรับ searchKey, postalKey, noteType, noteScope)</td>
+      <td><span class="file-tag">07_PlaceService.gs</span></td>
+      <td><span class="badge badge-done">Done</span></td>
+    </tr>
+    <tr>
+      <td>P1</td>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>Performance: <span class="code">updateDestinationStats()</span> ใช้ row-by-row <span class="code">setValue()</span> 3 ครั้ง (3 API calls ต่อ 1 แถว)</td>
+      <td>เปลี่ยนเป็น batch <span class="code">setValues()</span> — อ่าน 3 คอลัมน์ → แก้ใน RAM → เขียนทีเดียว (ลดจาก 3+1 API calls → 1+1)</td>
+      <td><span class="file-tag">09_DestinationService.gs</span></td>
+      <td><span class="badge badge-done">Done</span></td>
+    </tr>
+    <tr>
+      <td>C2</td>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>Consolidate: <span class="code">safeAlert_()</span> (16_GeoDictBuilder) + <span class="code">safeUiAlert_()</span> (13_ReportService) ทำหน้าที่เดียวกันแต่คนละชื่อ</td>
+      <td>สร้าง <span class="code">safeUiAlert_()</span> ใน 14_Utils.gs (Single Source of Truth) — safeAlert_() ใน 16_GeoDictBuilder เปลี่ยนเป็น wrapper เรียก safeUiAlert_()</td>
+      <td><span class="file-tag">14_Utils.gs</span><br><span class="file-tag">16_GeoDictBuilder.gs</span></td>
+      <td><span class="badge badge-done">Done</span></td>
+    </tr>
+  </table>
+</div>
+
+<!-- PAGE 4: Detailed Fix Explanations -->
+<div class="page">
+  <h1>3. รายละเอียดการแก้ไข</h1>
+  
+  <h2>3.1 BUG-C1: Single Writer Violation (Critical)</h2>
+  <div class="done-box">
+    <strong>สถานะ:</strong> แก้ไขแล้ว | <strong>ไฟล์:</strong> <span class="file-tag">18_ServiceSCG.gs</span>
+  </div>
+  <p><strong>ปัญหา:</strong> ใน <span class="code">fetchDataFromSCGJWD()</span> (Group 2 Commander) มีการเรียก <span class="code">populateAliasFromSCGRawData_()</span> ซึ่งเขียนข้อมูลลง M_ALIAS ผ่าน <span class="code">createGlobalAlias()</span> การกระทำนี้ละเมิด Single Writer Pattern เพราะ M_ALIAS ถูกกำหนดให้เขียนที่ <span class="code">autoEnrichAliasesFromFactBatch_()</span> (Module 10) เท่านั้น นอกจากนี้ยังละเมิดขอบเขตกลุ่ม เพราะ Group 2 ไม่ควรเขียน Master Data ของ Group 1</p>
+  <p><strong>การแก้ไข:</strong> ลบบล็อกการเรียก <span class="code">populateAliasFromSCGRawData_()</span> ออกจาก <span class="code">fetchDataFromSCGJWD()</span> ทั้งหมด พร้อมคอมเมนต์อธิบายเหตุผล ผู้ใช้ที่ต้องการดึงชื่อจาก SCG ดิบ → M_ALIAS สามารถใช้เมนู "ระบบ > ดึงชื่อจาก SCG ดิบ → M_ALIAS" ได้ตามปกติ</p>
+  
+  <h2>3.2 BUG-C4: Time Guard Missing (Critical)</h2>
+  <div class="done-box">
+    <strong>สถานะ:</strong> แก้ไขแล้ว | <strong>ไฟล์:</strong> <span class="file-tag">21_AliasService.gs</span>
+  </div>
+  <p><strong>ปัญหา:</strong> <span class="code">MIGRATION_HybridAliasSystem()</span> ใช้ <span class="code">forEach()</span> loop ที่ไม่สามารถหยุดกลางคันได้ หากข้อมูลมากกว่า 5000 แถว จะทำให้ GAS Timeout (จำกัด 6 นาที) โดยไม่มีกลไกป้องกัน</p>
+  <p><strong>การแก้ไข:</strong> (1) เปลี่ยน <span class="code">forEach()</span> เป็น <span class="code">for</span> loop เพื่อให้ break ได้ (2) เพิ่ม Time Guard ตรวจทุก 50 แถว หากเกิน 5 นาทีจะหยุดพร้อมแจ้งเตือน (3) ตรวจเวลาก่อนเริ่ม Step 4 และ Step 5 (4) แจ้งเตือน Timeout พร้อมคำแนะนำให้รันอีกครั้ง</p>
+  
+  <h2>3.3 Fake Call: autoInstallSmartNav_()</h2>
+  <div class="done-box">
+    <strong>สถานะ:</strong> แก้ไขแล้ว | <strong>ไฟล์:</strong> <span class="file-tag">00_App.gs</span>
+  </div>
+  <p><strong>ปัญหา:</strong> ใน <span class="code">onOpen()</span> มีการเรียก <span class="code">autoInstallSmartNav_()</span> แต่ไม่มี function นี้อยู่ในระบบ ทำให้ try-catch กลืน error เงียบ ฟังก์ชันที่มีอยู่คือ <span class="code">installSmartNavTrigger()</span> แต่อันนั้นถามผู้ใช้ก่อนติดตั้ง (ไม่เหมาะกับ onOpen)</p>
+  <p><strong>การแก้ไข:</strong> สร้าง <span class="code">autoInstallSmartNav_()</span> ขึ้นมาใหม่ — ตรวจสอบว่ามี Smart Navigation trigger อยู่แล้วหรือไม่ ถ้าไม่มีจึงติดตั้งแบบเงียบ (silent install) โดยไม่ถามผู้ใช้ แยกจาก <span class="code">installSmartNavTrigger()</span> ที่ยังคงไว้สำหรับการติดตั้งแบบแมนนวล</p>
+  
+  <h2>3.4 Hardcode Index → DATA_IDX.*</h2>
+  <div class="done-box">
+    <strong>สถานะ:</strong> แก้ไขแล้ว | <strong>ไฟล์:</strong> <span class="file-tag">18_ServiceSCG.gs</span>
+  </div>
+  <p><strong>ปัญหา:</strong> ในส่วน shopAgg ของ <span class="code">fetchDataFromSCGJWD()</span> ใช้ตัวเลข index ตรงๆ (hardcode) แทนชื่อคงที่ เช่น <span class="code">r[28]</span> <span class="code">r[14]</span> <span class="code">r[16]</span> ทำให้อ่านยากและเสี่ยงผิดพลาดหากมีการเปลี่ยนแปลงโครงสร้างคอลัมน์</p>
+  <table>
+    <tr><th>เดิม (Hardcode)</th><th>ใหม่ (Named Constant)</th><th>ความหมาย</th></tr>
+    <tr><td><span class="code">r[28]</span></td><td><span class="code">r[DATA_IDX.SHOP_KEY]</span></td><td>รหัสร้านค้า</td></tr>
+    <tr><td><span class="code">r[14]</span></td><td><span class="code">r[DATA_IDX.QTY]</span></td><td>จำนวนสินค้า</td></tr>
+    <tr><td><span class="code">r[16]</span></td><td><span class="code">r[DATA_IDX.WEIGHT]</span></td><td>น้ำหนักสินค้า</td></tr>
+    <tr><td><span class="code">r[2]</span></td><td><span class="code">r[DATA_IDX.INVOICE_NO]</span></td><td>เลขที่ Invoice</td></tr>
+    <tr><td><span class="code">r[9]</span></td><td><span class="code">r[DATA_IDX.SOLD_TO_NAME]</span></td><td>ชื่อเจ้าของสินค้า</td></tr>
+    <tr><td><span class="code">r[23]</span></td><td><span class="code">r[DATA_IDX.TOT_QTY]</span></td><td>จำนวนรวมของร้าน</td></tr>
+    <tr><td><span class="code">r[24]</span></td><td><span class="code">r[DATA_IDX.TOT_WEIGHT]</span></td><td>น้ำหนักรวมของร้าน</td></tr>
+    <tr><td><span class="code">r[25]</span></td><td><span class="code">r[DATA_IDX.SCAN_INV]</span></td><td>จำนวน Invoice ต้องสแกน</td></tr>
+    <tr><td><span class="code">r[27]</span></td><td><span class="code">r[DATA_IDX.OWNER_LABEL]</span></td><td>ป้ายชื่อเจ้าของสินค้า</td></tr>
+  </table>
+</div>
+
+<!-- PAGE 5: More Details + Architecture -->
+<div class="page">
+  <h2>3.5 Duplicate Function: loadCachedGeoRows_()</h2>
+  <div class="done-box">
+    <strong>สถานะ:</strong> แก้ไขแล้ว | <strong>ไฟล์:</strong> <span class="file-tag">07_PlaceService.gs</span>
+  </div>
+  <p><strong>ปัญหา:</strong> <span class="code">loadCachedGeoRows_()</span> มีอยู่ 2 เวอร์ชัน — เวอร์ชันใน 07_PlaceService.gs อ่านเพียง 4 คอลัมน์ (postcode, subDistrict, district, province) ส่วนเวอร์ชันใน 16_GeoDictionaryBuilder.gs อ่านครบ 16 คอลัมน์ (เพิ่ม searchKey, postalKey, noteType, noteScope) เนื่องจาก GAS มี global scope ฟังก์ชันที่โหลดทีหลังจะเขียนทับตัวก่อนหน้า ทำให้เวอร์ชันที่ได้ไม่แน่นอนขึ้นอยู่กับลำดับการโหลด</p>
+  <p><strong>การแก้ไข:</strong> ลบ <span class="code">loadCachedGeoRows_()</span> เวอร์ชันเก่าออกจาก 07_PlaceService.gs และคงไว้เฉพาะเวอร์ชัน 16 คอลัมน์ใน 16_GeoDictionaryBuilder.gs ซึ่งเป็น canonical version</p>
+  
+  <h2>3.6 Performance: updateDestinationStats()</h2>
+  <div class="done-box">
+    <strong>สถานะ:</strong> แก้ไขแล้ว | <strong>ไฟล์:</strong> <span class="file-tag">09_DestinationService.gs</span>
+  </div>
+  <p><strong>ปัญหา:</strong> เดิมใช้ <span class="code">setValue()</span> แยก 3 ครั้ง (lastSeen, usageCount, deliveryDate) ทำให้มี 3-4 API calls ต่อการอัปเดต 1 แถว — เมื่อ Match Engine ประมวลผลหลายร้อยแถวจะช้ามาก</p>
+  <p><strong>การแก้ไข:</strong> เปลี่ยนเป็น batch write — อ่านทั้ง 3 คอลัมน์มาแก้ไขใน RAM แล้วเขียนกลับทีเดียวด้วย <span class="code">setValues([rowData])</span> ลดจาก 3-4 API calls เหลือ 1-2 calls ต่อแถว</p>
+  
+  <h2>3.7 Consolidate: safeAlert_ + safeUiAlert_</h2>
+  <div class="done-box">
+    <strong>สถานะ:</strong> แก้ไขแล้ว | <strong>ไฟล์:</strong> <span class="file-tag">14_Utils.gs</span>
+  </div>
+  <p><strong>ปัญหา:</strong> <span class="code">safeAlert_()</span> (16_GeoDictionaryBuilder) และ <span class="code">safeUiAlert_()</span> (13_ReportService) ทำหน้าที่เดียวกัน — แสดง alert แบบ trigger-safe แต่อยู่คนละไฟล์ ซ้ำซ้อน</p>
+  <p><strong>การแก้ไข:</strong> สร้าง <span class="code">safeUiAlert_()</span> ใน 14_Utils.gs เป็น Single Source of Truth พร้อมรองรับพารามิเตอร์ title (optional) — safeAlert_() ใน 16_GeoDictionaryBuilder.gs เปลี่ยนเป็น wrapper เรียก safeUiAlert_() เพื่อ backward compatibility</p>
+  
+  <h1>4. Architecture Rule Summary</h1>
+  
+  <table>
+    <tr><th style="width:30%">Rule</th><th>คำอธิบาย</th></tr>
+    <tr><td>Single Writer Pattern</td><td>M_ALIAS เขียนที่ <span class="code">autoEnrichAliasesFromFactBatch_()</span> (Module 10) เท่านั้น — ห้ามเรียก <span class="code">createGlobalAlias()</span> ใน auto pipeline</td></tr>
+    <tr><td>Group Boundary Rule</td><td>Group 2 (Daily Ops) = READ only สำหรับ M_ALIAS/M_DESTINATION — ห้ามเขียน กลุ่ม 1 = WRITE เท่านั้น</td></tr>
+    <tr><td>Search Key = ShipToName</td><td>คอลัมน์ที่ใช้ค้นหาพิกัดคือ <span class="code">SHIP_TO_NAME (Index 10)</span> ไม่ใช่ SoldToName — ShipToName = จุดหมายปลายทางจริง</td></tr>
+    <tr><td>No Hardcode Index</td><td>ใช้ <span class="code">DATA_IDX.*</span> เสมอ ห้ามใช้ <span class="code">r[28]</span> หรือตัวเลขตรงๆ</td></tr>
+    <tr><td>API Fetch = Immutable</td><td>โค้ดดึงข้อมูล SCG API (<span class="code">fetchDataFromSCGJWD</span>) สมบูรณ์แล้ว — ห้ามแก้ไขหรือตัดทิ้ง</td></tr>
+    <tr><td>Time Guard Mandatory</td><td>ทุก loop ที่ประมวลผลมากกว่า 100 แถว ต้องมี Time Guard ตรวจทุก 50 แถว</td></tr>
+    <tr><td>No Fake Calls</td><td>ทุก function ที่ถูกเรียกต้องมีนิยาม ห้ามเรียก function ที่ไม่มีอยู่ แม้จะมี try-catch ครอบ</td></tr>
+    <tr><td>Batch Over Row-by-Row</td><td>ใช้ <span class="code">setValues()</span> (batch) แทน <span class="code">setValue()</span> (row-by-row) เสมอเมื่อเป็นไปได้</td></tr>
+  </table>
+</div>
+
+<!-- PAGE 6: Files Changed -->
+<div class="page">
+  <h1>5. ไฟล์ที่ถูกแก้ไข (v5.4.002)</h1>
+  
+  <table>
+    <tr><th style="width:5%">#</th><th style="width:25%">ไฟล์</th><th style="width:15%">Version</th><th>การเปลี่ยนแปลง</th></tr>
+    <tr><td>1</td><td><span class="file-tag">00_App.gs</span></td><td>v5.4.002</td><td>+autoInstallSmartNav_() — แก้ Fake Call bug</td></tr>
+    <tr><td>2</td><td><span class="file-tag">07_PlaceService.gs</span></td><td>v5.4.002</td><td>-loadCachedGeoRows_() duplicate — ย้ายไปใช้ของ 16</td></tr>
+    <tr><td>3</td><td><span class="file-tag">09_DestinationService.gs</span></td><td>v5.4.002</td><td>updateDestinationStats() batch write (Performance)</td></tr>
+    <tr><td>4</td><td><span class="file-tag">13_ReportService.gs</span></td><td>v5.4.002</td><td>safeUiAlert_() → delegate to 14_Utils</td></tr>
+    <tr><td>5</td><td><span class="file-tag">14_Utils.gs</span></td><td>v5.4.002</td><td>+safeUiAlert_() — consolidated trigger-safe alert</td></tr>
+    <tr><td>6</td><td><span class="file-tag">16_GeoDictionaryBuilder.gs</span></td><td>v5.4.002</td><td>safeAlert_() → wrapper to safeUiAlert_()</td></tr>
+    <tr><td>7</td><td><span class="file-tag">18_ServiceSCG.gs</span></td><td>v5.4.002</td><td>-populateAliasFromSCGRawData_() call (C1) + DATA_IDX.* (H1)</td></tr>
+    <tr><td>8</td><td><span class="file-tag">21_AliasService.gs</span></td><td>v5.4.002</td><td>MIGRATION_HybridAliasSystem() +Time Guard (C4)</td></tr>
+  </table>
+  
+  <h1>6. ไฟล์ที่ไม่ถูกแก้ไข (Intentionally Preserved)</h1>
+  
+  <div class="info-box">
+    <strong>หมายเหตุ:</strong> ไฟล์ต่อไปนี้ไม่ถูกแก้ไขโดยเจตนา — โค้ดเดิมทำงานถูกต้องและสมบูรณ์แล้ว
+  </div>
+  
+  <table>
+    <tr><th style="width:25%">ไฟล์</th><th>เหตุผลที่ไม่แก้</th></tr>
+    <tr><td><span class="file-tag">01_Config.gs</span></td><td>CONFIG และ IDX constants ถูกต้องครบถ้วน — ไม่ต้องแก้</td></tr>
+    <tr><td><span class="file-tag">17_SearchService.gs</span></td><td>runLookupEnrichment() มี Time Guard และ Batch Write อยู่แล้ว — ใช้ ShipToName (DATA_IDX=10) ถูกต้อง</td></tr>
+    <tr><td><span class="file-tag">10_MatchEngine.gs</span></td><td>autoEnrichAliasesFromFactBatch_() เป็น Single Writer ที่ถูกต้อง — ไม่ต้องแก้</td></tr>
+    <tr><td><span class="file-tag">20_ThGeoService.gs</span></td><td>เรียก loadCachedGeoRows_() จาก 16 ซึ่งยังใช้ได้ปกติ — ไม่ต้องแก้</td></tr>
+  </table>
+
+  <h1>7. คำแนะนำการ Deploy</h1>
+  
+  <ol>
+    <li><strong>Backup:</strong> สำรองข้อมูล Spreadsheet ก่อนนำโค้ดใหม่ไปใช้</li>
+    <li><strong>Deploy Order:</strong> แทนที่ไฟล์ตามลำดับเลขไฟล์ (00 → 01 → ... → 21)</li>
+    <li><strong>Test C1:</strong> รัน fetchDataFromSCGJWD() → ตรวจว่า M_ALIAS ไม่ถูกเขียนเพิ่ม (เฉพาะ READ)</li>
+    <li><strong>Test C4:</strong> รัน MIGRATION_HybridAliasSystem() → ตรวจว่ามี Time Guard แจ้งเตือนเมื่อข้อมูลเยอะ</li>
+    <li><strong>Test F1:</strong> เปิด Spreadsheet ใหม่ → ตรวจว่า Smart Navigation trigger ติดตั้งอัตโนมัติ</li>
+    <li><strong>Test H1:</strong> รัน fetchDataFromSCGJWD() → ตรวจว่า ShopKey, TOT_QTY ฯลฯ แสดงผลถูกต้อง</li>
+    <li><strong>Verify:</strong> รัน "ตรวจสอบ System Integrity" → ต้องผ่านทุกอย่าง</li>
+  </ol>
+</div>
+
+</body>
+</html>

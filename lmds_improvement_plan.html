@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>แผนการปรับปรุงโค้ด LMDS V5.4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;600;700&family=Sarasa+Mono+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+  }
+  :root {
+    --c-primary: #1e3a5f;
+    --c-secondary: #2d6da3;
+    --c-accent: #e8913a;
+    --c-bg: #ffffff;
+    --c-text: #1a1a2e;
+    --c-muted: #6b7280;
+    --c-code-bg: #f8f9fa;
+    --c-border: #e5e7eb;
+    --c-critical: #dc2626;
+    --c-high: #ea580c;
+    --c-medium: #d97706;
+    --c-low: #16a34a;
+  }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Noto Sans Thai', 'Noto Sans', sans-serif;
+    font-size: 10pt;
+    line-height: 1.65;
+    color: var(--c-text);
+    background: var(--c-bg);
+  }
+  /* Cover Page */
+  .cover {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    text-align: center;
+    padding: 40px;
+  }
+  .cover-badge {
+    display: inline-block;
+    padding: 6px 18px;
+    border: 2px solid var(--c-accent);
+    border-radius: 4px;
+    font-size: 10pt;
+    font-weight: 600;
+    color: var(--c-accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+  .cover h1 {
+    font-size: 28pt;
+    font-weight: 700;
+    color: var(--c-primary);
+    margin: 0 0 10px 0;
+    line-height: 1.25;
+  }
+  .cover h2 {
+    font-size: 14pt;
+    font-weight: 400;
+    color: var(--c-secondary);
+    margin: 0 0 40px 0;
+  }
+  .cover-meta {
+    font-size: 9.5pt;
+    color: var(--c-muted);
+    margin-top: 40px;
+    line-height: 2;
+  }
+  .cover-divider {
+    width: 80px;
+    height: 3px;
+    background: var(--c-accent);
+    margin: 30px auto;
+  }
+
+  /* TOC */
+  .toc-page {
+    page-break-after: always;
+  }
+  .toc-page h2 {
+    font-size: 16pt;
+    color: var(--c-primary);
+    border-bottom: 2px solid var(--c-primary);
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+  }
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 0;
+    border-bottom: 1px dotted var(--c-border);
+    font-size: 10pt;
+  }
+  .toc-item .toc-label { font-weight: 500; }
+  .toc-item .toc-page-num { color: var(--c-muted); font-size: 9pt; }
+
+  /* Body */
+  .section {
+    page-break-before: auto;
+    margin-bottom: 30px;
+  }
+  h2.section-title {
+    font-size: 15pt;
+    font-weight: 700;
+    color: var(--c-primary);
+    border-left: 4px solid var(--c-accent);
+    padding-left: 12px;
+    margin: 35px 0 15px 0;
+  }
+  h3 {
+    font-size: 12pt;
+    font-weight: 600;
+    color: var(--c-secondary);
+    margin: 20px 0 10px 0;
+  }
+  h4 {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: var(--c-text);
+    margin: 15px 0 8px 0;
+  }
+  p { margin: 6px 0; text-align: left; }
+
+  /* Priority badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 3px;
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: #fff;
+    vertical-align: middle;
+  }
+  .badge-critical { background: var(--c-critical); }
+  .badge-high { background: var(--c-high); }
+  .badge-medium { background: var(--c-medium); }
+  .badge-low { background: var(--c-low); }
+
+  /* Info boxes */
+  .info-box {
+    border: 1px solid var(--c-border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    background: #fafbfc;
+  }
+  .info-box.violation {
+    border-left: 4px solid var(--c-critical);
+    background: #fef2f2;
+  }
+  .info-box.risk {
+    border-left: 4px solid var(--c-high);
+    background: #fff7ed;
+  }
+  .info-box.fix {
+    border-left: 4px solid var(--c-low);
+    background: #f0fdf4;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 9.5pt;
+  }
+  th {
+    background: var(--c-primary);
+    color: #fff;
+    font-weight: 600;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 9pt;
+  }
+  td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--c-border);
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f9fafb; }
+
+  /* Code blocks */
+  pre {
+    background: var(--c-code-bg);
+    border: 1px solid var(--c-border);
+    border-radius: 5px;
+    padding: 12px 16px;
+    font-family: 'Sarasa Mono SC', 'Courier New', monospace;
+    font-size: 8.5pt;
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 10px 0;
+  }
+  code {
+    font-family: 'Sarasa Mono SC', 'Courier New', monospace;
+    font-size: 8.5pt;
+    background: var(--c-code-bg);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  .code-label {
+    font-size: 8pt;
+    font-weight: 600;
+    color: var(--c-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .code-wrong { border-left: 3px solid var(--c-critical); }
+  .code-right { border-left: 3px solid var(--c-low); }
+
+  /* Step list */
+  .step-list {
+    counter-reset: step;
+    list-style: none;
+    padding-left: 0;
+  }
+  .step-list li {
+    counter-increment: step;
+    position: relative;
+    padding: 8px 0 8px 40px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .step-list li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 28px;
+    height: 28px;
+    background: var(--c-secondary);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 10pt;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Summary card */
+  .summary-card {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d6da3 100%);
+    color: #fff;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 15px 0;
+  }
+  .summary-card h3 { color: #fff; margin-top: 0; }
+  .summary-card table { color: #fff; }
+  .summary-card th { background: rgba(255,255,255,0.15); }
+  .summary-card td { border-bottom-color: rgba(255,255,255,0.15); }
+  .summary-card tr:nth-child(even) td { background: rgba(255,255,255,0.05); }
+
+  /* Page break helper */
+  .page-break { page-break-before: always; }
+
+  /* Checklist */
+  .checklist { list-style: none; padding-left: 0; }
+  .checklist li {
+    padding: 4px 0 4px 24px;
+    position: relative;
+  }
+  .checklist li::before {
+    content: "\2610";
+    position: absolute;
+    left: 0;
+    font-size: 12pt;
+    color: var(--c-secondary);
+  }
+
+  .footnote {
+    font-size: 8.5pt;
+    color: var(--c-muted);
+    border-top: 1px solid var(--c-border);
+    padding-top: 8px;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== COVER PAGE ==================== -->
+<div class="cover">
+  <div class="cover-badge">Cross-Validation Report</div>
+  <h1>แผนการปรับปรุงโค้ด<br>LMDS V5.4</h1>
+  <div class="cover-divider"></div>
+  <h2>ฉบับละเอียด — 7 ข้อที่ต้องแก้ไข/เพิ่มเติม<br>พร้อมโค้ดก่อน-หลัง และขั้นตอนทีละ Step</h2>
+  <div class="cover-meta">
+    ระบบ: Logistics Master Data System (LMDS) V5.4.001<br>
+    แพลตฟอร์ม: Google Apps Script (22 ไฟล์)<br>
+    วันที่จัดทำ: 25 พฤษภาคม 2569<br>
+    ตรวจสอบโดย: Super Z (AI Principal Engineer)<br>
+    อ้างอิง: กฎ 15 ข้อ LMDS + lmds-supreme-engineer skill
+  </div>
+</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc-page">
+  <h2>สารบัญ</h2>
+  <div class="toc-item"><span class="toc-label">1. สรุปภาพรวม — 7 ข้อที่ต้องแก้ไข</span></div>
+  <div class="toc-item"><span class="toc-label">2. FIX-01: Single Writer Pattern Violation (BUG-C1)</span></div>
+  <div class="toc-item"><span class="toc-label">3. FIX-02: MIGRATION ขาด Time Guard (BUG-C4)</span></div>
+  <div class="toc-item"><span class="toc-label">4. FIX-03: Hardcode Index ใน 18_ServiceSCG.gs</span></div>
+  <div class="toc-item"><span class="toc-label">5. FIX-04: Fake Function Call — autoInstallSmartNav_()</span></div>
+  <div class="toc-item"><span class="toc-label">6. FIX-05: ฟังก์ชันซ้ำ — loadCachedGeoRows_()</span></div>
+  <div class="toc-item"><span class="toc-label">7. FIX-06: ฟังก์ชัน Utility ซ้ำ — safeAlert_ / safeUiAlert_</span></div>
+  <div class="toc-item"><span class="toc-label">8. FIX-07: autoEnrichAliasesFromFactBatch_ ยาวเกิน 265 บรรทัด</span></div>
+  <div class="toc-item"><span class="toc-label">9. ลำดับความสำคัญและแผนการดำเนินงาน</span></div>
+  <div class="toc-item"><span class="toc-label">10. Checklist สำหรับตรวจสอบหลังแก้ไข</span></div>
+</div>
+
+<!-- ==================== SECTION 1: OVERVIEW ==================== -->
+<h2 class="section-title">1. สรุปภาพรวม — 7 ข้อที่ต้องแก้ไข</h2>
+<p>จากการ Cross-Validation โดย 5 ระบบ AI (Claude, Genspark, Zai, Minimax, Gemini) และการตรวจสอบยืนยันโดย Super Z พบว่ามี <strong>7 ข้อที่เป็นจริง</strong> และต้องดำเนินการแก้ไขทั้งหมด รายการเหล่านี้ละเมิดกฎการเขียนโค้ด LMDS ข้อต่างๆ และอาจก่อให้เกิดปัญหาร้ายแรงในการทำงานจริงของระบบ</p>
+
+<div class="summary-card">
+  <h3>สรุป 7 ข้อที่ต้องแก้ไข</h3>
+  <table>
+    <tr><th>รหัส</th><th>ปัญหา</th><th>กฎที่ละเมิด</th><th>ความเสี่ยง</th></tr>
+    <tr><td>FIX-01</td><td>Single Writer Pattern Violation — populateAliasFromSCGRawData_() ใน Pipeline อัตโนมัติ</td><td>ข้อ 8 (Namespace), Single Writer</td><td><span class="badge badge-critical">CRITICAL</span></td></tr>
+    <tr><td>FIX-02</td><td>MIGRATION_HybridAliasSystem() ขาด Time Guard + Checkpoint</td><td>ข้อ 5 (Checkpoint & Resume)</td><td><span class="badge badge-critical">CRITICAL</span></td></tr>
+    <tr><td>FIX-03</td><td>Hardcode Index — r[28], r[14], r[16], r[2], r[9] ใน 18_ServiceSCG.gs</td><td>ข้อ 3 (No Hardcode Index)</td><td><span class="badge badge-high">HIGH</span></td></tr>
+    <tr><td>FIX-04</td><td>Fake Function Call — autoInstallSmartNav_() ไม่มีนิยาม</td><td>ข้อ 7 (No Fake Function Calls)</td><td><span class="badge badge-high">HIGH</span></td></tr>
+    <tr><td>FIX-05</td><td>ฟังก์ชันซ้ำ — loadCachedGeoRows_() ใน 2 ไฟล์</td><td>ข้อ 8 (Namespace Collision)</td><td><span class="badge badge-medium">MEDIUM</span></td></tr>
+    <tr><td>FIX-06</td><td>Utility ซ้ำ — safeAlert_() / safeUiAlert_() ทำหน้าที่เดียวกัน</td><td>ข้อ 8 (Namespace Collision)</td><td><span class="badge badge-medium">MEDIUM</span></td></tr>
+    <tr><td>FIX-07</td><td>autoEnrichAliasesFromFactBatch_() ยาว 265 บรรทัด</td><td>ข้อ 1 (Clean Code), ข้อ 2 (Single Resp.)</td><td><span class="badge badge-low">LOW</span></td></tr>
+  </table>
+</div>
+
+<!-- ==================== FIX-01 ==================== -->
+<div class="page-break"></div>
+<h2 class="section-title">2. FIX-01: Single Writer Pattern Violation (BUG-C1)</h2>
+<span class="badge badge-critical">CRITICAL</span>
+
+<h3>2.1 รายละเอียดปัญหา</h3>
+<div class="info-box violation">
+  <strong>กฎที่ละเมิด:</strong> Single Writer Pattern + ข้อ 8 (Namespace Collision Prevention)<br>
+  <strong>ไฟล์ที่เกี่ยวข้อง:</strong> 18_ServiceSCG.gs (ผู้เรียก), 21_AliasService.gs (ผู้ถูกเรียก), 10_MatchEngine.gs (Single Writer ที่ถูกต้อง)<br>
+  <strong>ความเสี่ยง:</strong> ข้อมูล M_ALIAS ถูกเขียนจาก 2 จุดใน Pipeline อัตโนมัติ ทำให้เกิด Race Condition, ข้อมูลซ้ำซ้อน, และ Cache Inconsistency
+</div>
+
+<p>ตามสถาปัตยกรรม Hybrid Alias ของ LMDS V5.4 กำหนดว่า <strong>M_ALIAS ใน Pipeline อัตโนมัติต้องถูกเขียนจากจุดเดียวเท่านั้น</strong> คือ <code>autoEnrichAliasesFromFactBatch_()</code> ใน 10_MatchEngine.gs แต่ปัจจุบัน 18_ServiceSCG.gs เรียก <code>populateAliasFromSCGRawData_()</code> หลังจากดึงข้อมูล SCG ซึ่งเขียน M_ALIAS โดยตรงผ่าน <code>createGlobalAlias()</code> — เป็นการละเมิด Single Writer Pattern</p>
+
+<h3>2.2 โค้ดปัจจุบัน (ผิด)</h3>
+<div class="code-label">ไฟล์: 18_ServiceSCG.gs บรรทัด 199-208</div>
+<pre class="code-wrong">// ปัจจุบัน: เรียก populateAliasFromSCGRawData_() ใน Pipeline อัตโนมัติ
+applyMasterCoordinatesToDailyJob();
+
+// [NEW v5.4.000] ดึงชื่อปลายทางจากข้อมูล SCG ใหม่ → M_ALIAS
+if (typeof populateAliasFromSCGRawData_ === 'function') {
+  try {
+    populateAliasFromSCGRawData_();  // ❌ ละเมิด Single Writer — เขียน M_ALIAS นอก autoEnrich
+  } catch (aliasErr) {
+    logWarn('ServiceSCG', 'populateAliasFromSCGRawData_ ล้มเหลว: ' + aliasErr.message);
+  }
+}</pre>
+
+<h3>2.3 โค้ดที่แก้ไขแล้ว (ถูกต้อง)</h3>
+<p><strong>แนวทาง:</strong> ย้ายการเรียก <code>populateAliasFromSCGRawData_()</code> ออกจาก Pipeline อัตโนมัติ (18_ServiceSCG) และให้ SCG Names ถูกเพิ่มเข้า M_ALIAS ผ่าน <code>autoEnrichAliasesFromFactBatch_()</code> แทน — ซึ่งจะเกิดขึ้นโดยอัตโนมัติเมื่อ Match Engine ประมวลผล FACT_DELIVERY อยู่แล้ว หากต้องการเพิ่ม Alias จาก SCG ดิบทันที ให้ย้ายไปเป็นเมนู Admin แทน</p>
+
+<div class="code-label">ไฟล์: 18_ServiceSCG.gs — ลบการเรียก populateAliasFromSCGRawData_() ออก</div>
+<pre class="code-right">// แก้ไข: ไม่เรียก populateAliasFromSCGRawData_() ใน Pipeline อัตโนมัติ
+applyMasterCoordinatesToDailyJob();
+
+// [REMOVED v5.4.002] ลบ populateAliasFromSCGRawData_() ออกจาก Pipeline
+// เหตุผล: ละเมิด Single Writer Pattern — M_ALIAS ต้องเขียนที่ autoEnrich เท่านั้น
+// ชื่อจาก SCG จะถูกเพิ่มเข้า M_ALIAS อัตโนมัติผ่าน autoEnrichAliasesFromFactBatch_()
+// หากต้องการดึง Alias จาก SCG ดิบทันที → ใช้เมนู "ดึงชื่อจาก SCG ดิบ → M_ALIAS" แทน
+
+buildOwnerSummary();
+buildShipmentSummary();</pre>
+
+<h3>2.4 ขั้นตอนการแก้ไข</h3>
+<ol class="step-list">
+  <li><strong>ลบการเรียก populateAliasFromSCGRawData_()</strong> ออกจาก fetchDataFromSCGJWD() ใน 18_ServiceSCG.gs (บรรทัด 201-208)</li>
+  <li><strong>ตรวจสอบ autoEnrichAliasesFromFactBatch_()</strong> ใน 10_MatchEngine.gs ว่ารองรับการเพิ่ม Alias จาก ShipToName ใน FACT_DELIVERY อยู่แล้ว — ซึ่งรองรับแล้วในบรรทัด 316-384</li>
+  <li><strong>อัปเดต Dependency Comment</strong> ในหัวไฟล์ 18_ServiceSCG.gs — ลบ populateAliasFromSCGRawData_ ออกจาก CALLS</li>
+  <li><strong>ทดสอบ:</strong> รัน fetchDataFromSCGJWD() → ตรวจสอบว่า M_ALIAS ยังได้รับข้อมูลผ่าน autoEnrich หลังรัน Match Engine</li>
+</ol>
+
+<h3>2.5 ผลกระทบ</h3>
+<p>การแก้ไขนี้จะทำให้ Alias จาก SCG ถูกเพิ่มล่าช้าขึ้นเล็กน้อย (หลังรัน Match Engine แทนที่จะเป็นทันทีหลังดึงข้อมูล SCG) แต่รับประกันความสมบูรณ์ของข้อมูล M_ALIAS เนื่องจากมีจุดเขียนเดียว ลดความเสี่ยง Race Condition และ Cache Inconsistency อย่างมีนัยสำคัญ ผู้ใช้ที่ต้องการ Alias ทันทีสามารถใช้เมนู "ดึงชื่อจาก SCG ดิบ" ซึ่งอยู่ในเมนู ระบบ & ตั้งค่า อยู่แล้ว</p>
+
+<!-- ==================== FIX-02 ==================== -->
+<div class="page-break"></div>
+<h2 class="section-title">3. FIX-02: MIGRATION ขาด Time Guard + Checkpoint (BUG-C4)</h2>
+<span class="badge badge-critical">CRITICAL</span>
+
+<h3>3.1 รายละเอียดปัญหา</h3>
+<div class="info-box violation">
+  <strong>กฎที่ละเมิด:</strong> ข้อ 5 (Checkpoint & Resume)<br>
+  <strong>ไฟล์:</strong> 21_AliasService.gs — MIGRATION_HybridAliasSystem() บรรทัด 451-547<br>
+  <strong>ความเสี่ยง:</strong> GAS มี Time Limit 6 นาที — MIGRATION ที่ประมวลผลมากกว่า 5,000 แถวจะ Timeout กลางคัน โดยไม่มีจุดบันทึก ทำให้ต้องเริ่มใหม่ตั้งแต่แถวแรกทุกครั้ง
+</div>
+
+<p>ฟังก์ชัน <code>MIGRATION_HybridAliasSystem()</code> มี 5 ขั้นตอนหลัก แต่ละขั้นตอนมีการวนลูป <code>forEach()</code> และเรียก <code>createGlobalAlias()</code> ซึ่งทำ <code>appendRow()</code> ทีละแถว (ละเมิดข้อ 4 ด้วย) โดยไม่มี Time Guard ตรวจสอบเวลา และไม่มี Checkpoint บันทึกตำแหน่งปัจจุบัน</p>
+
+<h3>3.2 โค้ดที่แก้ไขแล้ว — เพิ่ม Time Guard + Batch Write + Checkpoint</h3>
+<p>เนื่องจากฟังก์ชันยาวมาก จะแสดงเฉพาะส่วนที่แก้ไขสำคัญ:</p>
+
+<div class="code-label">เพิ่ม Constants ที่หัวไฟล์ 21_AliasService.gs</div>
+<pre class="code-right">// Checkpoint keys สำหรับ Migration
+var MIGRATION_CHECKPOINT_KEY = 'MIGRATION_ALIAS_STEP';
+var MIGRATION_TIME_LIMIT_SEC = 5 * 60; // 5 นาที (เผื่อ 1 นาที)</pre>
+
+<div class="code-label">แก้ไข MIGRATION_HybridAliasSystem() — เพิ่ม Time Guard + Checkpoint</div>
+<pre class="code-right">function MIGRATION_HybridAliasSystem() {
+  var ui = SpreadsheetApp.getUi();
+  var confirmation = ui.alert(
+    'Migration: Hybrid Alias System',
+    'ระบบจะดำเนินการดังนี้:\n' +
+    '1. ตรวจสอบและเพิ่ม master_uuid\n' +
+    '2. ย้าย M_PERSON_ALIAS → M_ALIAS\n' +
+    '3. ย้าย M_PLACE_ALIAS → M_ALIAS\n' +
+    '4. ดึงชื่อจากชีต SCG ดิบ → M_ALIAS\n' +
+    '5. ดึงชื่อจาก FACT_DELIVERY → M_ALIAS\n\n' +
+    'ระบบรองรับ Checkpoint — หาก Timeout จะรันต่อได้\n\n' +
+    'พร้อมดำเนินการหรือไม่?',
+    ui.ButtonSet.YES_NO
+  );
+  if (confirmation !== ui.Button.YES) return;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var startTime = Date.now();
+  var state = loadMigrationCheckpoint_();
+
+  // Step 1: ตรวจสอบ master_uuid (ทำเฉพาะครั้งแรก)
+  if (state.step <= 1) {
+    logInfo('AliasService', 'Step 1: ตรวจสอบ master_uuid...');
+    var uuidFixed = assignMasterUuidIfMissing();
+    logInfo('AliasService', 'เพิ่ม master_uuid ให้ ' + uuidFixed + ' entities');
+    CacheService.getScriptCache().removeAll(
+      ['M_PERSON_ALL','M_PLACE_ALL','M_GLOBAL_ALIAS_ALL','M_GLOBAL_ALIAS_REVERSE']
+    );
+    saveMigrationCheckpoint_(2, 0); // ไป Step 2
+  }
+
+  // Step 2: ย้าย M_PERSON_ALIAS → M_ALIAS (Batch + Time Guard)
+  if (state.step <= 2) {
+    logInfo('AliasService', 'Step 2: ย้าย M_PERSON_ALIAS → M_ALIAS...');
+    var personAliasSheet = ss.getSheetByName(SHEET.M_PERSON_ALIAS);
+    if (personAliasSheet && personAliasSheet.getLastRow() > 1) {
+      var paData = personAliasSheet.getRange(2, 1,
+        personAliasSheet.getLastRow() - 1, SCHEMA[SHEET.M_PERSON_ALIAS].length
+      ).getValues();
+
+      var batchRows = [];
+      for (var i = state.rowIndex; i &lt; paData.length; i++) {
+        // Time Guard ทุก 50 แถว
+        if (i % 50 === 0 && hasTimePassed_(startTime, MIGRATION_TIME_LIMIT_SEC)) {
+          saveMigrationCheckpoint_(2, i);
+          logInfo('AliasService', 'Checkpoint Step 2 ที่แถว ' + i);
+          ui.alert('⏰ Migration ใกล้ Timeout\n\n' +
+            'Step 2 แถวที่ ' + i + '/' + paData.length +
+            '\nรันใหม่เพื่อดำเนินการต่อ');
+          return;
+        }
+
+        var r = paData[i];
+        if (!r[PERSON_ALIAS_IDX.ACTIVE_FLAG]) continue;
+        var personId = String(r[PERSON_ALIAS_IDX.PERSON_ID] || '');
+        var aliasName = String(r[PERSON_ALIAS_IDX.ALIAS_NAME] || '');
+        var matchScore = Number(r[PERSON_ALIAS_IDX.MATCH_SCORE] || 100);
+        if (!personId || !aliasName) continue;
+
+        var masterUuid = convertPersonIdToUuid(personId);
+        if (masterUuid) {
+          batchRows.push([generateShortId('A'), masterUuid, aliasName,
+            'PERSON', matchScore, 'V52_LEGACY_MIGRATION', new Date(), true]);
+        }
+
+        // Batch write ทุก 100 แถว
+        if (batchRows.length >= 100) {
+          batchAppendToAliasSheet_(batchRows);
+          batchRows = [];
+        }
+      }
+      if (batchRows.length > 0) batchAppendToAliasSheet_(batchRows);
+    }
+    saveMigrationCheckpoint_(3, 0);
+  }
+
+  // Step 3-5: โครงสร้างคล้ายกัน — เพิ่ม Time Guard + Batch
+  // ... (โครงสร้างเดียวกันกับ Step 2)
+
+  // เสร็จสิ้น — ลบ Checkpoint
+  clearMigrationCheckpoint_();
+  logInfo('AliasService', 'Migration เสร็จสิ้น');
+}
+
+// Helper: Batch append to M_ALIAS
+function batchAppendToAliasSheet_(rows) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET.M_ALIAS);
+  if (!sheet || rows.length === 0) return;
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length)
+    .setValues(rows);
+  CacheService.getScriptCache().remove('M_GLOBAL_ALIAS_ALL');
+  CacheService.getScriptCache().remove('M_GLOBAL_ALIAS_REVERSE');
+}
+
+// Helper: Checkpoint functions
+function saveMigrationCheckpoint_(step, rowIndex) {
+  PropertiesService.getScriptProperties().setProperty(
+    MIGRATION_CHECKPOINT_KEY,
+    JSON.stringify({ step: step, rowIndex: rowIndex })
+  );
+}
+function loadMigrationCheckpoint_() {
+  var raw = PropertiesService.getScriptProperties()
+    .getProperty(MIGRATION_CHECKPOINT_KEY);
+  if (raw) { try { return JSON.parse(raw); } catch(e) {} }
+  return { step: 1, rowIndex: 0 };
+}
+function clearMigrationCheckpoint_() {
+  PropertiesService.getScriptProperties()
+    .deleteProperty(MIGRATION_CHECKPOINT_KEY);
+}
+function hasTimePassed_(startTime, limitSec) {
+  return (Date.now() - startTime) / 1000 > limitSec;
+}</pre>
+
+<h3>3.3 ขั้นตอนการแก้ไข</h3>
+<ol class="step-list">
+  <li><strong>เพิ่ม Constants</strong> — MIGRATION_CHECKPOINT_KEY, MIGRATION_TIME_LIMIT_SEC ที่หัวไฟล์ 21_AliasService.gs</li>
+  <li><strong>เพิ่ม Helper Functions</strong> — saveMigrationCheckpoint_, loadMigrationCheckpoint_, clearMigrationCheckpoint_, hasTimePassed_, batchAppendToAliasSheet_</li>
+  <li><strong>แก้ MIGRATION_HybridAliasSystem()</strong> — เพิ่ม Time Guard ทุก 50 แถว, Checkpoint บันทึก Step + RowIndex, Batch Write แทน appendRow</li>
+  <li><strong>ทดสอบ:</strong> รัน Migration กับข้อมูล &gt; 1,000 แถว แล้วตรวจสอบว่า Checkpoint บันทึกถูกต้อง และรันต่อได้จากจุดที่ค้างไว้</li>
+</ol>
+
+<!-- ==================== FIX-03 ==================== -->
+<div class="page-break"></div>
+<h2 class="section-title">4. FIX-03: Hardcode Index ใน 18_ServiceSCG.gs</h2>
+<span class="badge badge-high">HIGH</span>
+
+<h3>4.1 รายละเอียดปัญหา</h3>
+<div class="info-box violation">
+  <strong>กฎที่ละเมิด:</strong> ข้อ 3 (No Hardcode Index) — ห้ามใช้ตัวเลขตรงกับคอลัมน์<br>
+  <strong>ไฟล์:</strong> 18_ServiceSCG.gs บรรทัด 161-177<br>
+  <strong>ความเสี่ยง:</strong> หากเพิ่ม/ลดคอลัมน์ในชีตตารางงานประจำวัน ระบบจะอ้างอิงผิดทันทีโดยไม่มี Error Message ชัดเจน
+</div>
+
+<h3>4.2 โค้ดปัจจุบัน (ผิด) — มี Hardcode 8 จุด</h3>
+<pre class="code-wrong">// บรรทัด 161-177 ใน fetchDataFromSCGJWD()
+const shopAgg = {};
+allFlatData.forEach(r => {
+  const key = r[28];                    // ❌ Hardcode — ควรใช้ DATA_IDX.SHOP_KEY
+  if (!shopAgg[key]) shopAgg[key] = { qty: 0, weight: 0, invoices: new Set(), epod: 0 };
+  shopAgg[key].qty += Number(r[14]) || 0;      // ❌ Hardcode — ควรใช้ DATA_IDX.QTY
+  shopAgg[key].weight += Number(r[16]) || 0;    // ❌ Hardcode — ควรใช้ DATA_IDX.WEIGHT
+  shopAgg[key].invoices.add(r[2]);              // ❌ Hardcode — ควรใช้ DATA_IDX.INVOICE_NO
+  if (checkIsEPOD(r[9], r[2])) shopAgg[key].epod++;  // ❌ r[9] → DATA_IDX.SOLD_TO_NAME
+});
+
+allFlatData.forEach(r => {
+  const agg = shopAgg[r[28]];           // ❌ Hardcode
+  const scanInv = agg.invoices.size - agg.epod;
+  r[23] = agg.qty;                      // ❌ Hardcode — ควรใช้ DATA_IDX.TOT_QTY
+  r[24] = Number(agg.weight.toFixed(2)); // ❌ Hardcode — ควรใช้ DATA_IDX.TOT_WEIGHT
+  r[25] = scanInv;                      // ❌ Hardcode — ควรใช้ DATA_IDX.SCAN_INV
+  r[27] = `${r[9]} / รวม ${scanInv} บิล`; // ❌ Hardcode — DATA_IDX.OWNER_LABEL
+});</pre>
+
+<h3>4.3 โค้ดที่แก้ไขแล้ว (ถูกต้อง)</h3>
+<pre class="code-right">// ใช้ DATA_IDX constants จาก 01_Config.gs
+const shopAgg = {};
+allFlatData.forEach(r => {
+  const key = r[DATA_IDX.SHOP_KEY];
+  if (!shopAgg[key]) shopAgg[key] = { qty: 0, weight: 0, invoices: new Set(), epod: 0 };
+  shopAgg[key].qty += Number(r[DATA_IDX.QTY]) || 0;
+  shopAgg[key].weight += Number(r[DATA_IDX.WEIGHT]) || 0;
+  shopAgg[key].invoices.add(r[DATA_IDX.INVOICE_NO]);
+  if (checkIsEPOD(r[DATA_IDX.SOLD_TO_NAME], r[DATA_IDX.INVOICE_NO])) shopAgg[key].epod++;
+});
+
+allFlatData.forEach(r => {
+  const agg = shopAgg[r[DATA_IDX.SHOP_KEY]];
+  const scanInv = agg.invoices.size - agg.epod;
+  r[DATA_IDX.TOT_QTY] = agg.qty;
+  r[DATA_IDX.TOT_WEIGHT] = Number(agg.weight.toFixed(2));
+  r[DATA_IDX.SCAN_INV] = scanInv;
+  r[DATA_IDX.OWNER_LABEL] = `${r[DATA_IDX.SOLD_TO_NAME]} / รวม ${scanInv} บิล`;
+});</pre>
+
+<h3>4.4 ขั้นตอนการแก้ไข</h3>
+<ol class="step-list">
+  <li><strong>ตรวจสอบ DATA_IDX</strong> ใน 01_Config.gs ว่ามีครบทุกคีย์ที่ต้องใช้: SHOP_KEY, QTY, WEIGHT, INVOICE_NO, SOLD_TO_NAME, TOT_QTY, TOT_WEIGHT, SCAN_INV, OWNER_LABEL — <em>มีครบแล้วทุกคีย์</em></li>
+  <li><strong>แทนที่ Hardcode</strong> ทั้ง 8 จุดด้วย DATA_IDX constants ตามตารางด้านล่าง</li>
+  <li><strong>ทดสอบ:</strong> รัน fetchDataFromSCGJWD() → ตรวจสอบชีตตารางงานประจำวันว่าข้อมูลถูกต้อง</li>
+</ol>
+
+<table>
+  <tr><th>Hardcode</th><th>ค่า</th><th>DATA_IDX Constant</th></tr>
+  <tr><td><code>r[28]</code></td><td>ShopKey</td><td><code>DATA_IDX.SHOP_KEY</code></td></tr>
+  <tr><td><code>r[14]</code></td><td>ItemQuantity</td><td><code>DATA_IDX.QTY</code></td></tr>
+  <tr><td><code>r[16]</code></td><td>ItemWeight</td><td><code>DATA_IDX.WEIGHT</code></td></tr>
+  <tr><td><code>r[2]</code></td><td>InvoiceNo</td><td><code>DATA_IDX.INVOICE_NO</code></td></tr>
+  <tr><td><code>r[9]</code></td><td>SoldToName</td><td><code>DATA_IDX.SOLD_TO_NAME</code></td></tr>
+  <tr><td><code>r[23]</code></td><td>TotQty</td><td><code>DATA_IDX.TOT_QTY</code></td></tr>
+  <tr><td><code>r[24]</code></td><td>TotWeight</td><td><code>DATA_IDX.TOT_WEIGHT</code></td></tr>
+  <tr><td><code>r[25]</code></td><td>ScanInv</td><td><code>DATA_IDX.SCAN_INV</code></td></tr>
+  <tr><td><code>r[27]</code></td><td>OwnerLabel</td><td><code>DATA_IDX.OWNER_LABEL</code></td></tr>
+</table>
+
+<!-- ==================== FIX-04 ==================== -->
+<div class="page-break"></div>
+<h2 class="section-title">5. FIX-04: Fake Function Call — autoInstallSmartNav_()</h2>
+<span class="badge badge-high">HIGH</span>
+
+<h3>5.1 รายละเอียดปัญหา</h3>
+<div class="info-box violation">
+  <strong>กฎที่ละเมิด:</strong> ข้อ 7 (No Fake Function Calls) — ห้ามเรียกฟังก์ชันที่ไม่มีจริงในโปรเจกต์<br>
+  <strong>ไฟล์:</strong> 00_App.gs บรรทัด 89<br>
+  <strong>ความเสี่ยง:</strong> ฟังก์ชันนี้ไม่มีนิยามในโปรเจกต์ แม้จะมี try-catch ครอบไว้จึงไม่ Error แต่เป็น "Dead Code" ที่ทำให้เข้าใจผิดว่า Smart Navigation ติดตั้งอัตโนมัติ (ซึ่งไม่ได้ทำ)
+</div>
+
+<h3>5.2 โค้ดปัจจุบัน (ผิด)</h3>
+<pre class="code-wrong">// 00_App.gs บรรทัด 89
+try { autoInstallSmartNav_(); } catch (_) {}
+// ❌ autoInstallSmartNav_() ไม่มีนิยามในโปรเจกต์ — Fake Call</pre>
+
+<h3>5.3 โค้ดที่แก้ไขแล้ว (ถูกต้อง)</h3>
+<p>มี 2 ทางเลือก:</p>
+
+<h4>ทางเลือก A: ลบออก (แนะนำ)</h4>
+<pre class="code-right">// [FIX v5.4.002] ลบ autoInstallSmartNav_() — ฟังก์ชันนี้ไม่มีนิยาม (Fake Call)
+// Smart Navigation ติดตั้งผ่านเมนู "ติดตั้ง Smart Navigation" เท่านั้น
+// ผู้ใช้ต้องติดตั้งเองจากเมนู → ระบบ & ตั้งค่า → ติดตั้ง Smart Navigation</pre>
+
+<h4>ทางเลือก B: สร้างฟังก์ชันจริง (ถ้าต้องการ Auto-Install)</h4>
+<pre class="code-right">/**
+ * autoInstallSmartNav_ — ตรวจสอบและติดตั้ง Smart Navigation อัตโนมัติ
+ * ตรวจว่ามี Installable Trigger สำหรับ handleSelectionChange_ แล้วหรือยัง
+ * ถ้ายัง → ติดตั้งอัตโนมัติ
+ */
+function autoInstallSmartNav_() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasSmartNav = triggers.some(function(t) {
+    return t.getHandlerFunction() === 'handleSelectionChange_';
+  });
+
+  if (!hasSmartNav) {
+    ScriptApp.newTrigger('handleSelectionChange_')
+      .forSpreadsheet(SpreadsheetApp.getActive())
+      .onSelectionChange()
+      .create();
+    logInfo('App', 'autoInstallSmartNav: ติดตั้ง Smart Navigation อัตโนมัติ');
+  }
+}</pre>
+
+<h3>5.4 ขั้นตอนการแก้ไข</h3>
+<ol class="step-list">
+  <li><strong>เลือกทางเลือก A หรือ B</strong> — หากไม่ต้องการ Auto-Install ให้ลบบรรทัดนั้นออก (ทางเลือก A) หากต้องการ Auto-Install ให้สร้างฟังก์ชันจริง (ทางเลือก B)</li>
+  <li><strong>อัปเดต Comment</strong> ใน onOpen() อธิบายว่าทำไมจึงเลือกทางเลือกนั้น</li>
+  <li><strong>ทดสอบ:</strong> เปิด Spreadsheet → ตรวจสอบว่าไม่มี Error ใน Stackdriver Log และเมนูทำงานปกติ</li>
+</ol>
+
+<!-- ==================== FIX-05 ==================== -->
+<h2 class="section-title">6. FIX-05: ฟังก์ชันซ้ำ — loadCachedGeoRows_()</h2>
+<span class="badge badge-medium">MEDIUM</span>
+
+<h3>6.1 รายละเอียดปัญหา</h3>
+<div class="info-box violation">
+  <strong>กฎที่ละเมิด:</strong> ข้อ 8 (Namespace Collision Prevention) — ห้ามตั้งชื่อฟังก์ชันซ้ำกันในไฟล์ต่างๆ<br>
+  <strong>ไฟล์:</strong> 16_GeoDictionaryBuilder.gs (บรรทัด 322) และ 07_PlaceService.gs (บรรทัด 638)<br>
+  <strong>ความเสี่ยง:</strong> GAS รวม Global Scope — ฟังก์ชันที่โหลดทีหลังจะเขียนทับฟังก์ชันก่อนหน้า ปัจจุบัน 07_PlaceService.gs โหลดทีหลังแต่อ่านเพียง 4 คอลัมน์ ทำให้ 20_ThGeoService.gs ซึ่งต้องการ 16 คอลัมน์ได้ข้อมูลไม่ครบ
+</div>
+
+<h3>6.2 โค้ดปัจจุบัน — ฟังก์ชันซ้ำ 2 แห่ง</h3>
+<pre class="code-wrong">// 16_GeoDictionaryBuilder.gs (บรรทัด 322) — อ่าน 16 คอลัมน์
+function loadCachedGeoRows_() {
+  if (_GLOBAL_GEO_DICT_CACHE) return _GLOBAL_GEO_DICT_CACHE;
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1,
+    SCHEMA[SHEET.SYS_TH_GEO].length).getValues();  // ✅ 16 คอลัมน์
+  // ... map เป็น object 8 properties
+}
+
+// 07_PlaceService.gs (บรรทัด 638) — อ่าน 4 คอลัมน์
+function loadCachedGeoRows_() {
+  if (_GLOBAL_GEO_DICT_CACHE) return _GLOBAL_GEO_DICT_CACHE;
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();  // ❌ 4 คอลัมน์
+  // ... map เป็น object 4 properties
+}</pre>
+
+<h3>6.3 โค้ดที่แก้ไขแล้ว</h3>
+<p><strong>แนวทาง:</strong> ลบ <code>loadCachedGeoRows_()</code> ออกจาก 07_PlaceService.gs แล้วให้ทุกไฟล์ใช้เวอร์ชันจาก 16_GeoDictionaryBuilder.gs (ซึ่งอ่าน 16 คอลัมน์ครบถ้วน)</p>
+
+<pre class="code-right">// 07_PlaceService.gs — ลบ loadCachedGeoRows_() ออกทั้งฟังก์ชัน
+// [FIX v5.4.002] ลบฟังก์ชันซ้ำ — ใช้ loadCachedGeoRows_() จาก 16_GeoDictionaryBuilder.gs
+// ไฟล์ 07_PlaceService.gs อ้างอิง loadCachedGeoRows_ จาก 16_GeoDictionaryBuilder.gs
+// (ระบุใน DEPENDENCIES comment ที่หัวไฟล์)</pre>
+
+<div class="code-label">อัปเดต DEPENDENCIES ใน 07_PlaceService.gs</div>
+<pre class="code-right">// ⚠️ Dependencies:
+//   - 16_GeoDictionaryBuilder (loadCachedGeoRows_)  ← เพิ่มบรรทัดนี้</pre>
+
+<h3>6.4 ขั้นตอนการแก้ไข</h3>
+<ol class="step-list">
+  <li><strong>ลบ loadCachedGeoRows_()</strong> ทั้งฟังก์ชันออกจาก 07_PlaceService.gs (บรรทัด 636-654)</li>
+  <li><strong>อัปเดต DEPENDENCIES</strong> ในหัวไฟล์ 07_PlaceService.gs — เพิ่ม loadCachedGeoRows_ → 16_GeoDictionaryBuilder.gs</li>
+  <li><strong>ตรวจสอบ</strong> ว่าไม่มีไฟล์อื่นที่เรียก loadCachedGeoRows_() และคาดหวังผลลัพธ์ 4 คอลัมน์ (มีเฉพาะใน 07_PlaceService เอง)</li>
+  <li><strong>ทดสอบ:</strong> รัน lookupPostcodeByArea() → ตรวจสอบว่าข้อมูล Geo ครบ 8 properties</li>
+</ol>
+
+<!-- ==================== FIX-06 ==================== -->
+<div class="page-break"></div>
+<h2 class="section-title">7. FIX-06: ฟังก์ชัน Utility ซ้ำ — safeAlert_ / safeUiAlert_</h2>
+<span class="badge badge-medium">MEDIUM</span>
+
+<h3>7.1 รายละเอียดปัญหา</h3>
+<div class="info-box violation">
+  <strong>กฎที่ละเมิด:</strong> ข้อ 8 (Namespace Collision Prevention) — ฟังก์ชันทำหน้าที่เดียวกันแต่ชื่อต่างกัน<br>
+  <strong>ไฟล์:</strong> 16_GeoDictionaryBuilder.gs (<code>safeAlert_</code>) และ 13_ReportService.gs (<code>safeUiAlert_</code>)<br>
+  <strong>ความเสี่ยง:</strong> การตั้งชื่อไม่เป็นมาตรฐานทำให้ยากต่อการบำรุงรักษา และหากมีไฟล์ที่ 3 ต้องการฟังก์ชันนี้จะต้องเขียนซ้ำอีก
+</div>
+
+<h3>7.2 โค้ดปัจจุบัน — ฟังก์ชันเดียวกัน ชื่อต่างกัน</h3>
+<pre class="code-wrong">// 16_GeoDictionaryBuilder.gs (บรรทัด 465)
+function safeAlert_(message) {
+  try { SpreadsheetApp.getUi().alert(message); }
+  catch (e) { logInfo('GeoDictBuilder', `[UI Message] ${message}`); }
+}
+
+// 13_ReportService.gs (บรรทัด 221)
+function safeUiAlert_(message) {
+  try { SpreadsheetApp.getUi().alert(message); }
+  catch (e) { logInfo('ReportService', `[UI Message] ${message.substring(0, 100)}...`); }
+}</pre>
+
+<h3>7.3 โค้ดที่แก้ไขแล้ว — ย้ายไป 14_Utils.gs เป็นฟังก์ชันกลาง</h3>
+<pre class="code-right">// 14_Utils.gs — เพิ่มฟังก์ชันกลาง
+/**
+ * safeAlert_ — แสดง UI Alert อย่างปลอดภัย (Trigger-safe)
+ * ถ้ารันจาก Trigger ที่ไม่มี UI context → log แทน
+ * @param {string} message - ข้อความที่จะแสดง
+ * @param {string} [source] - ชื่อโมดูลที่เรียก (สำหรับ log)
+ */
+function safeAlert_(message, source) {
+  try {
+    SpreadsheetApp.getUi().alert(message);
+  } catch (e) {
+    var src = source || 'System';
+    var msg = message.length > 200 ? message.substring(0, 200) + '...' : message;
+    logInfo(src, '[UI Message] ' + msg);
+  }
+}
+
+// 16_GeoDictionaryBuilder.gs — ลบ safeAlert_() ออก และเรียกจาก 14_Utils.gs
+// (เรียก safeAlert_() ได้เลยเพราะ GAS Global Scope)
+
+// 13_ReportService.gs — เปลี่ยนชื่อ safeUiAlert_ → เรียก safeAlert_ จาก 14_Utils.gs
+// แทนที่:
+//   safeUiAlert_(msg)
+// เป็น:
+//   safeAlert_(msg, 'ReportService')</pre>
+
+<h3>7.4 ขั้นตอนการแก้ไข</h3>
+<ol class="step-list">
+  <li><strong>เพิ่ม safeAlert_()</strong> ใน 14_Utils.gs พร้อม parameter <code>source</code> สำหรับระบุโมดูลที่เรียก</li>
+  <li><strong>ลบ safeAlert_()</strong> ออกจาก 16_GeoDictionaryBuilder.gs (บรรทัด 465-467)</li>
+  <li><strong>เปลี่ยน safeUiAlert_()</strong> เป็น safeAlert_() ใน 13_ReportService.gs — แทนที่ทุกจุดที่เรียก <code>safeUiAlert_(msg)</code> เป็น <code>safeAlert_(msg, 'ReportService')</code></li>
+  <li><strong>ลบ safeUiAlert_()</strong> ออกจาก 13_ReportService.gs</li>
+  <li><strong>อัปเดต DEPENDENCIES</strong> ทั้ง 2 ไฟล์ — เพิ่ม safeAlert_ → 14_Utils.gs</li>
+</ol>
+
+<!-- ==================== FIX-07 ==================== -->
+<div class="page-break"></div>
+<h2 class="section-title">8. FIX-07: autoEnrichAliasesFromFactBatch_ ยาวเกิน 265 บรรทัด</h2>
+<span class="badge badge-low">LOW</span>
+
+<h3>8.1 รายละเอียดปัญหา</h3>
+<div class="info-box violation">
+  <strong>กฎที่ละเมิด:</strong> ข้อ 1 (Clean Code — ฟังก์ชันยาวไม่เกิน 30-50 บรรทัด), ข้อ 2 (Single Responsibility)<br>
+  <strong>ไฟล์:</strong> 10_MatchEngine.gs — autoEnrichAliasesFromFactBatch_() บรรทัด 238-503 (265 บรรทัด)<br>
+  <strong>ความเสี่ยง:</strong> ยากต่อการอ่าน ทำความเข้าใจ และ Debug แม้จะเป็น pure transformation function ก็ตาม
+</div>
+
+<p>ฟังก์ชันนี้ทำงาน 5 หน้าที่หลัก: (1) โหลด Person Map (2) โหลด Place Map (3) โหลด Alias Dedup Sets (4) สะสมแถวใหม่จาก factBatch (5) Batch Write ทั้ง 3 ชีต ซึ่งละเมิดกฎข้อ 2 (1 ฟังก์ชัน = 1 หน้าที่)</p>
+
+<h3>8.2 โครงสร้างที่แก้ไขแล้ว — แยกเป็น 4 Sub-functions</h3>
+<pre class="code-right">/**
+ * autoEnrichAliasesFromFactBatch_ — [REWRITE v5.4.002] Single Writer Pattern
+ * แยกเป็น sub-functions เพื่อให้อ่านง่ายและ debug ง่าย
+ */
+function autoEnrichAliasesFromFactBatch_(factBatch) {
+  if (!factBatch || factBatch.length === 0) return;
+
+  // 1. โหลดข้อมูลอ้างอิง
+  var refs = loadEnrichReferenceData_();
+
+  // 2. สะสมแถวใหม่
+  var newRows = collectNewAliasRows_(factBatch, refs);
+
+  // 3. Batch Write ทั้ง 3 ชีต
+  batchWriteAliasRows_(newRows);
+
+  // 4. Log
+  logEnrichResult_(newRows);
+}
+
+/** Sub-function 1: โหลด Person Map, Place Map, Dedup Sets */
+function loadEnrichReferenceData_() {
+  // ~50 บรรทัด — โหลด allPersons, allPlaces, existingAliasSets
+  // คืน { personMap, placeMap, existingPersonAliasSet,
+  //        existingPlaceAliasSet, existingGlobalAliasSet, mAliasSheet }
+}
+
+/** Sub-function 2: สะสมแถวใหม่จาก factBatch */
+function collectNewAliasRows_(factBatch, refs) {
+  // ~80 บรรทัด — วนลูป factBatch สร้าง newGlobalAliasRows,
+  // newPersonAliasRows, newPlaceAliasRows
+  // คืน { newGlobalAliasRows, newPersonAliasRows, newPlaceAliasRows }
+}
+
+/** Sub-function 3: Batch Write ทั้ง 3 ชีต */
+function batchWriteAliasRows_(newRows) {
+  // ~30 บรรทัด — setValues ทั้ง 3 ชีต + invalidate cache
+}
+
+/** Sub-function 4: Log ผลลัพธ์ */
+function logEnrichResult_(newRows) {
+  // ~10 บรรทัด
+}</pre>
+
+<h3>8.3 ขั้นตอนการแก้ไข</h3>
+<ol class="step-list">
+  <li><strong>สร้าง loadEnrichReferenceData_()</strong> — ย้ายส่วนโหลดข้อมูลอ้างอิง (บรรทัด 243-307) มาไว้ที่นี่</li>
+  <li><strong>สร้าง collectNewAliasRows_()</strong> — ย้ายส่วนสะสมแถวใหม่ (บรรทัด 309-451) มาไว้ที่นี่</li>
+  <li><strong>สร้าง batchWriteAliasRows_()</strong> — ย้ายส่วนเขียนชีต (บรรทัด 453-487) มาไว้ที่นี่</li>
+  <li><strong>สร้าง logEnrichResult_()</strong> — ย้ายส่วน log (บรรทัด 489-503) มาไว้ที่นี่</li>
+  <li><strong>แก้ autoEnrichAliasesFromFactBatch_()</strong> — เรียก 4 sub-functions ตามลำดับ</li>
+  <li><strong>ทดสอบ:</strong> รัน Full Pipeline → ตรวจสอบว่า M_ALIAS, M_PERSON_ALIAS, M_PLACE_ALIAS ได้รับข้อมูลถูกต้องเหมือนเดิม</li>
+</ol>
+
+<!-- ==================== SECTION 9: PRIORITY ==================== -->
+<div class="page-break"></div>
+<h2 class="section-title">9. ลำดับความสำคัญและแผนการดำเนินงาน</h2>
+
+<p>แนะนำให้ดำเนินการแก้ไขตามลำดับความสำคัญดังนี้ เพื่อลดความเสี่ยงสูงสุดก่อน และค่อยๆ ปรับปรุงคุณภาพโค้ด:</p>
+
+<table>
+  <tr><th>ลำดับ</th><th>รหัส</th><th>ปัญหา</th><th>ความเสี่ยง</th><th>เวลาประมาณ</th><th>ไฟล์ที่แก้</th></tr>
+  <tr><td>1</td><td>FIX-01</td><td>Single Writer Violation</td><td><span class="badge badge-critical">CRITICAL</span></td><td>15 นาที</td><td>18_ServiceSCG.gs</td></tr>
+  <tr><td>2</td><td>FIX-02</td><td>MIGRATION ขาด Time Guard</td><td><span class="badge badge-critical">CRITICAL</span></td><td>45 นาที</td><td>21_AliasService.gs</td></tr>
+  <tr><td>3</td><td>FIX-03</td><td>Hardcode Index</td><td><span class="badge badge-high">HIGH</span></td><td>10 นาที</td><td>18_ServiceSCG.gs</td></tr>
+  <tr><td>4</td><td>FIX-04</td><td>Fake Function Call</td><td><span class="badge badge-high">HIGH</span></td><td>10 นาที</td><td>00_App.gs</td></tr>
+  <tr><td>5</td><td>FIX-05</td><td>ฟังก์ชันซ้ำ loadCachedGeoRows_</td><td><span class="badge badge-medium">MEDIUM</span></td><td>15 นาที</td><td>07_PlaceService.gs</td></tr>
+  <tr><td>6</td><td>FIX-06</td><td>Utility ซ้ำ safeAlert_</td><td><span class="badge badge-medium">MEDIUM</span></td><td>15 นาที</td><td>14_Utils.gs, 13_ReportService.gs, 16_GeoDictionaryBuilder.gs</td></tr>
+  <tr><td>7</td><td>FIX-07</td><td>ฟังก์ชันยาวเกิน 265 บรรทัด</td><td><span class="badge badge-low">LOW</span></td><td>30 นาที</td><td>10_MatchEngine.gs</td></tr>
+</table>
+
+<div class="info-box fix">
+  <strong>รวมเวลาประมาณ:</strong> 2 ชั่วโมง 20 นาที (รวมทดสอบ)<br>
+  <strong>ไฟล์ที่ต้องแก้ไข:</strong> 6 ไฟล์ (00_App, 07_PlaceService, 10_MatchEngine, 13_ReportService, 14_Utils, 16_GeoDictionaryBuilder, 18_ServiceSCG, 21_AliasService)<br>
+  <strong>เวอร์ชันถัดไป:</strong> V5.4.002
+</div>
+
+<!-- ==================== SECTION 10: CHECKLIST ==================== -->
+<h2 class="section-title">10. Checklist สำหรับตรวจสอบหลังแก้ไข</h2>
+<p>หลังจากดำเนินการแก้ไขทั้ง 7 ข้อแล้ว ให้ตรวจสอบตาม Checklist นี้ทุกรายการ:</p>
+
+<h3>Functional Testing</h3>
+<ul class="checklist">
+  <li>รัน fetchDataFromSCGJWD() — ข้อมูล SCG ดึงมาได้ปกติ ไม่มี Error</li>
+  <li>รัน Full Pipeline — M_ALIAS ได้รับ Alias จาก autoEnrich เท่านั้น (ไม่มีจุดเขียนอื่น)</li>
+  <li>รัน MIGRATION_HybridAliasSystem() — มี Time Guard + Checkpoint ทำงานถูกต้อง</li>
+  <li>หยุด Migration กลางคัน → รันใหม่ → ดำเนินการต่อจากจุดที่ค้างไว้ได้</li>
+  <li>ตรวจสอบชีตตารางงานประจำวัน — ข้อมูล TOT_QTY, TOT_WEIGHT, SCAN_INV, OWNER_LABEL ถูกต้อง</li>
+  <li>เปิด Spreadsheet — ไม่มี Error ใน Stackdriver Log จาก autoInstallSmartNav_</li>
+  <li>รัน lookupPostcodeByArea() — ข้อมูล Geo ครบ 8 properties (ไม่ใช่ 4)</li>
+  <li>รัน buildFullQualityReport() — แสดง Alert ได้ปกติ (safeAlert_ ทำงาน)</li>
+  <li>รัน buildGeoDictionary() — แสดง Alert ได้ปกติ (safeAlert_ ทำงาน)</li>
+</ul>
+
+<h3>Code Quality (15 กฎ)</h3>
+<ul class="checklist">
+  <li>ข้อ 3 — ไม่มี hardcode index เหลืออยู่ใน 18_ServiceSCG.gs</li>
+  <li>ข้อ 4 — MIGRATION ใช้ batch setValues() แทน appendRow() ในลูป</li>
+  <li>ข้อ 5 — MIGRATION มี Time Guard + Checkpoint + Resume</li>
+  <li>ข้อ 6 — ทุกไฟล์ที่แก้มี DEPENDENCIES comment อัปเดตแล้ว</li>
+  <li>ข้อ 7 — ไม่มี Fake Function Call เหลืออยู่</li>
+  <li>ข้อ 8 — ไม่มีฟังก์ชันชื่อซ้ำข้ามไฟล์</li>
+</ul>
+
+<div class="footnote">
+  เอกสารฉบับนี้จัดทำโดย Super Z (AI Principal Engineer) โดยอ้างอิงจากกฎการเขียนโค้ด LMDS 15 ข้อ,
+  lmds-supreme-engineer skill, และการ Cross-Validation โดย 5 ระบบ AI<br>
+  เวอร์ชัน: V5.4.002-draft | วันที่: 25 พฤษภาคม 2569
+</div>
+
+</body>
+</html>

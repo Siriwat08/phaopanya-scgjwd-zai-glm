@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Fira+Code:wght@400;500&display=swap');
+
+@page {
+  size: A4;
+  margin: 22mm 20mm 22mm 20mm;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Sarabun', 'Noto Sans SC', sans-serif;
+  font-size: 11pt;
+  line-height: 1.7;
+  color: #1f1e1c;
+  background: #fff;
+}
+
+/* Cover Page */
+.cover {
+  page-break-after: always;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  background: linear-gradient(135deg, #f4f3f2 0%, #efeeed 100%);
+}
+.cover::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 8px;
+  height: 100%;
+  background: linear-gradient(180deg, #6341ca, #6e6240);
+}
+.cover-kicker {
+  font-size: 14pt;
+  color: #7f7d75;
+  letter-spacing: 4pt;
+  text-transform: uppercase;
+  margin-bottom: 20pt;
+  font-weight: 300;
+}
+.cover-title {
+  font-size: 36pt;
+  font-weight: 700;
+  color: #1f1e1c;
+  margin-bottom: 16pt;
+  line-height: 1.3;
+}
+.cover-subtitle {
+  font-size: 16pt;
+  color: #6e6240;
+  font-weight: 400;
+  margin-bottom: 30pt;
+}
+.cover-meta {
+  font-size: 11pt;
+  color: #7f7d75;
+  margin-top: 40pt;
+}
+.cover-accent {
+  width: 80pt;
+  height: 3pt;
+  background: #6341ca;
+  margin: 20pt auto;
+}
+
+/* TOC */
+.toc { page-break-after: always; }
+.toc h2 { font-size: 18pt; color: #1f1e1c; margin-bottom: 16pt; border-bottom: 2pt solid #6341ca; padding-bottom: 6pt; }
+.toc-item { display: flex; justify-content: space-between; padding: 4pt 0; border-bottom: 1px dotted #d1ccc0; }
+.toc-item span:first-child { color: #1f1e1c; }
+.toc-item span:last-child { color: #7f7d75; }
+
+/* Section Headings */
+h1 {
+  font-size: 20pt;
+  font-weight: 700;
+  color: #1f1e1c;
+  margin-top: 28pt;
+  margin-bottom: 12pt;
+  padding-bottom: 6pt;
+  border-bottom: 2pt solid #6341ca;
+}
+h2 {
+  font-size: 15pt;
+  font-weight: 600;
+  color: #6e6240;
+  margin-top: 22pt;
+  margin-bottom: 8pt;
+}
+h3 {
+  font-size: 12pt;
+  font-weight: 600;
+  color: #6341ca;
+  margin-top: 16pt;
+  margin-bottom: 6pt;
+}
+
+/* Paragraphs */
+p { margin-bottom: 8pt; text-align: left; }
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10pt 0 14pt 0;
+  font-size: 9.5pt;
+}
+th {
+  background: #6e6240;
+  color: #fff;
+  font-weight: 600;
+  padding: 7pt 8pt;
+  text-align: left;
+  font-size: 9pt;
+}
+td {
+  padding: 6pt 8pt;
+  border-bottom: 1px solid #d1ccc0;
+  vertical-align: top;
+}
+tr:nth-child(even) td { background: #f3f2f1; }
+tr:nth-child(odd) td { background: #fff; }
+
+/* Code blocks */
+code, .code {
+  font-family: 'Fira Code', 'Sarasa Mono SC', 'DejaVu Sans Mono', monospace;
+  font-size: 8.5pt;
+  background: #efeeed;
+  padding: 1pt 4pt;
+  border-radius: 2pt;
+  color: #6341ca;
+}
+pre {
+  font-family: 'Fira Code', 'Sarasa Mono SC', 'DejaVu Sans Mono', monospace;
+  font-size: 8pt;
+  background: #2b2a28;
+  color: #e8e6e1;
+  padding: 10pt 14pt;
+  border-radius: 4pt;
+  overflow-x: auto;
+  margin: 8pt 0 12pt 0;
+  line-height: 1.5;
+}
+pre .comment { color: #7f7d75; }
+pre .keyword { color: #6341ca; }
+pre .string { color: #44c685; }
+pre .fn { color: #c4a44e; }
+
+/* Refactor Card */
+.refactor-card {
+  background: #fff;
+  border: 1px solid #d1ccc0;
+  border-left: 4pt solid #6341ca;
+  border-radius: 4pt;
+  padding: 14pt 16pt;
+  margin: 14pt 0;
+  page-break-inside: avoid;
+}
+.refactor-card.severity-high { border-left-color: #984d46; }
+.refactor-card.severity-medium { border-left-color: #a3874d; }
+.refactor-card.severity-low { border-left-color: #406a94; }
+
+.refactor-card .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8pt;
+}
+.refactor-card .header .title { font-weight: 700; font-size: 12pt; color: #1f1e1c; }
+.refactor-card .header .badge {
+  font-size: 8pt;
+  padding: 2pt 8pt;
+  border-radius: 10pt;
+  font-weight: 600;
+  color: #fff;
+}
+.badge-high { background: #984d46; }
+.badge-medium { background: #a3874d; }
+.badge-low { background: #406a94; }
+
+.refactor-card .meta { font-size: 9pt; color: #7f7d75; margin-bottom: 6pt; }
+.refactor-card .problem { margin-bottom: 8pt; }
+.refactor-card .fix { background: #f3f2f1; padding: 8pt 12pt; border-radius: 3pt; }
+
+/* Summary Stats */
+.stats-row {
+  display: flex;
+  gap: 12pt;
+  margin: 16pt 0;
+}
+.stat-box {
+  flex: 1;
+  background: #efeeed;
+  border-radius: 4pt;
+  padding: 12pt;
+  text-align: center;
+  border-top: 3pt solid #6341ca;
+}
+.stat-box .number { font-size: 28pt; font-weight: 700; color: #6341ca; }
+.stat-box .label { font-size: 9pt; color: #7f7d75; margin-top: 4pt; }
+
+/* Badges inline */
+.badge-inline {
+  display: inline-block;
+  font-size: 8pt;
+  padding: 1pt 6pt;
+  border-radius: 3pt;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 2pt;
+}
+.bg-red { background: #984d46; }
+.bg-amber { background: #a3874d; }
+.bg-blue { background: #406a94; }
+.bg-green { background: #437d56; }
+.bg-purple { background: #6341ca; }
+
+/* Utility */
+.mb-4 { margin-bottom: 4pt; }
+.mb-8 { margin-bottom: 8pt; }
+.mb-12 { margin-bottom: 12pt; }
+.mt-8 { margin-top: 8pt; }
+.text-muted { color: #7f7d75; }
+.text-sm { font-size: 9pt; }
+.text-xs { font-size: 8pt; }
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.list-disc { padding-left: 20pt; margin-bottom: 8pt; }
+.list-disc li { margin-bottom: 4pt; }
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<!-- ==================== COVER PAGE ==================== -->
+<div class="cover">
+  <div class="cover-kicker">Logistics Master Data System</div>
+  <div class="cover-accent"></div>
+  <div class="cover-title">LMDS Refactoring Plan</div>
+  <div class="cover-subtitle">แผนปรับปรุงโค้ดที่ซ้ำซ้อนและไม่ปฏิบัติตามกฎ 15 ข้อ</div>
+  <div class="cover-meta">
+    วิเคราะห์จากโค้ดจริง 22 ไฟล์ .gs &bull; อ้างอิง กฎการเขียนโค้ด LMDS.md + กฎการเขียนโค้ด.md<br>
+    วันที่: 26 พฤษภาคม 2569
+  </div>
+</div>
+
+<!-- ==================== TABLE OF CONTENTS ==================== -->
+<div class="toc">
+  <h2>สารบัญ</h2>
+  <div class="toc-item"><span>1. สรุปผลการวิเคราะห์</span><span></span></div>
+  <div class="toc-item"><span>2. Function ยาวเกิน 100 บรรทัด (14 ฟังก์ชัน)</span><span></span></div>
+  <div class="toc-item"><span>3. autoEnrichAliasesFromFactBatch_ (266 บรรทัด)</span><span></span></div>
+  <div class="toc-item"><span>4. Function ที่ทำหลายหน้าที่ (12 ฟังก์ชัน)</span><span></span></div>
+  <div class="toc-item"><span>5. Duplicate Code Patterns (9 รูปแบบ)</span><span></span></div>
+  <div class="toc-item"><span>6. Constants กระจายนอก 01_Config.gs</span><span></span></div>
+  <div class="toc-item"><span>7. ลำดับความสำคัญและแผนดำเนินการ</span><span></span></div>
+</div>
+
+<!-- ==================== SECTION 1: SUMMARY ==================== -->
+<h1>1. สรุปผลการวิเคราะห์</h1>
+
+<p>วิเคราะห์โค้ดจริงทั้ง 22 ไฟล์ .gs ในโปรเจกต์ LMDS โดยอ้างอิงกฎ 15 ข้อจาก <code>กฎการเขียนโค้ด LMDS.md</code> และ <code>กฎการเขียนโค้ด.md</code> ทุกข้อกล่าวอ้างมีหลักฐานจาก grep จริงเท่านั้น ไม่มีการอ้างอิงจากบทสนทนาเก่า</p>
+
+<div class="stats-row">
+  <div class="stat-box">
+    <div class="number">14</div>
+    <div class="label">Function ยาวเกิน 100 บรรทัด</div>
+  </div>
+  <div class="stat-box">
+    <div class="number">12</div>
+    <div class="label">Function ทำหลายหน้าที่</div>
+  </div>
+  <div class="stat-box">
+    <div class="number">9</div>
+    <div class="label">Duplicate Code Patterns</div>
+  </div>
+  <div class="stat-box">
+    <div class="number">46</div>
+    <div class="label">Constants กระจายนอก Config</div>
+  </div>
+</div>
+
+<p><span class="font-bold">ไฟล์ที่มีปัญหามากที่สุด:</span></p>
+<table>
+  <tr><th>ไฟล์</th><th>Function ยาว</th><th>Multi-Resp</th><th>Constants</th><th>รวม</th></tr>
+  <tr><td><code>10_MatchEngine.gs</code></td><td>3</td><td>3</td><td>11</td><td style="font-weight:700;color:#984d46">17</td></tr>
+  <tr><td><code>12_ReviewService.gs</code></td><td>1</td><td>1</td><td>5</td><td style="font-weight:700;color:#a3874d">7</td></tr>
+  <tr><td><code>18_ServiceSCG.gs</code></td><td>1</td><td>1</td><td>4</td><td style="font-weight:700;color:#a3874d">6</td></tr>
+  <tr><td><code>00_App.gs</code></td><td>1</td><td>1</td><td>3</td><td>5</td></tr>
+  <tr><td><code>15_GoogleMapsAPI.gs</code></td><td>0</td><td>0</td><td>7</td><td>7</td></tr>
+  <tr><td><code>05_NormalizeService.gs</code></td><td>1</td><td>0</td><td>5</td><td>6</td></tr>
+</table>
+
+<!-- ==================== SECTION 2: LONG FUNCTIONS ==================== -->
+<div class="page-break"></div>
+<h1>2. Function ยาวเกิน 100 บรรทัด</h1>
+
+<p>กฎข้อ 1 (Clean Code) ระบุว่าฟังก์ชันควรมีความยาวไม่เกิน 30 บรรทัด และกฎข้อ 1.1 อนุญาตให้ยาวเกินได้หากได้รับอนุมัติ แต่จากการ grep พบ 14 ฟังก์ชันที่ยาวเกิน 100 บรรทัด ซึ่งเกินขีดจำกัดอย่างมีนัยสำคัญ</p>
+
+<table>
+  <tr><th>#</th><th>ไฟล์</th><th>Function</th><th>บรรทัด</th><th>จำนวน</th></tr>
+  <tr><td>1</td><td><code>10_MatchEngine.gs</code></td><td>autoEnrichAliasesFromFactBatch_</td><td>238-503</td><td style="font-weight:700;color:#984d46">266</td></tr>
+  <tr><td>2</td><td><code>12_ReviewService.gs</code></td><td>applyReviewDecision</td><td>194-397</td><td style="font-weight:700;color:#984d46">204</td></tr>
+  <tr><td>3</td><td><code>18_ServiceSCG.gs</code></td><td>fetchDataFromSCGJWD</td><td>66-224</td><td style="color:#a3874d">159</td></tr>
+  <tr><td>4</td><td><code>00_App.gs</code></td><td>diagnoseSystemState</td><td>639-778</td><td style="color:#a3874d">140</td></tr>
+  <tr><td>5</td><td><code>21_AliasService.gs</code></td><td>MIGRATION_HybridAliasSystem</td><td>452-587</td><td style="color:#a3874d">136</td></tr>
+  <tr><td>6</td><td><code>17_SearchService.gs</code></td><td>runLookupEnrichment</td><td>250-376</td><td>127</td></tr>
+  <tr><td>7</td><td><code>13_ReportService.gs</code></td><td>buildFullQualityReport</td><td>74-194</td><td>121</td></tr>
+  <tr><td>8</td><td><code>17_SearchService.gs</code></td><td>findBestGeoByPersonPlace</td><td>78-196</td><td>119</td></tr>
+  <tr><td>9</td><td><code>19_Hardening.gs</code></td><td>generatePersonAliasesFromHistory</td><td>188-301</td><td>114</td></tr>
+  <tr><td>10</td><td><code>05_NormalizeService.gs</code></td><td>normalizePersonNameFull</td><td>162-272</td><td>111</td></tr>
+  <tr><td>11</td><td><code>11_TransactionService.gs</code></td><td>upsertFactDelivery</td><td>68-178</td><td>111</td></tr>
+  <tr><td>12</td><td><code>07_PlaceService.gs</code></td><td>getEnrichedGeoData</td><td>324-431</td><td>108</td></tr>
+  <tr><td>13</td><td><code>10_MatchEngine.gs</code></td><td>executeDecision</td><td>652-758</td><td>107</td></tr>
+  <tr><td>14</td><td><code>10_MatchEngine.gs</code></td><td>makeMatchDecision</td><td>546-646</td><td>101</td></tr>
+</table>
+
+<p class="text-muted text-sm">หมายเหตุ: normalizePersonNameFull ได้รับอนุญาตให้คงความยาว ~65 บรรทัดตามกฎข้อ 1.1 แต่ปัจจุบันขยายเป็น 111 บรรทัด ซึ่งเกินที่อนุมัติไว้</p>
+
+<!-- ==================== SECTION 3: autoEnrichAliasesFromFactBatch_ ==================== -->
+<div class="page-break"></div>
+<h1>3. Refactor #1: autoEnrichAliasesFromFactBatch_ (266 บรรทัด)</h1>
+
+<div class="refactor-card severity-high">
+  <div class="header">
+    <span class="title">Refactor #1: autoEnrichAliasesFromFactBatch_</span>
+    <span class="badge badge-high">CRITICAL</span>
+  </div>
+  <div class="meta">ไฟล์: <code>10_MatchEngine.gs:238-503</code> &bull; กฎที่ละเมิด: ข้อ 1, ข้อ 2, ข้อ 4</div>
+  <div class="problem">
+    <p class="font-semibold">ปัญหา:</p>
+    <ul class="list-disc">
+      <li>ฟังก์ชันยาว 266 บรรทัด (เกินกฎข้อ 1 ถึง 8.9 เท่า)</li>
+      <li>ทำหลายหน้าที่: โหลด reference data + สร้าง dedup sets + สร้าง person alias rows + สร้าง place alias rows + batch write 3 ชีต + log</li>
+      <li>เป็น Single Writer ของ M_ALIAS &mdash; การแก้ไขมีความเสี่ยงสูง</li>
+    </ul>
+  </div>
+  <div class="fix">
+    <p class="font-semibold mb-4">ขั้นตอนปัจจุบัน (5 ขั้นตอน):</p>
+    <table>
+      <tr><th>ขั้นตอน</th><th>บรรทัด</th><th>หน้าที่</th></tr>
+      <tr><td>Step 1</td><td>242-269</td><td>โหลด personMap + placeMap จาก cached loaders</td></tr>
+      <tr><td>Step 2</td><td>271-307</td><td>สร้าง dedup Sets (existingPersonAliasSet, existingPlaceAliasSet, existingGlobalAliasSet)</td></tr>
+      <tr><td>Step 3a+3b</td><td>324-383</td><td>สร้าง PERSON canonical + variant alias rows</td></tr>
+      <tr><td>Step 3c+3d</td><td>394-449</td><td>สร้าง PLACE canonical + variant alias rows</td></tr>
+      <tr><td>Step 4a+4b+4c</td><td>455-487</td><td>Batch write M_ALIAS + M_PERSON_ALIAS + M_PLACE_ALIAS</td></tr>
+      <tr><td>Step 5</td><td>489-502</td><td>Log ผลลัพธ์</td></tr>
+    </table>
+    <p class="font-semibold mt-8 mb-4">ขั้นตอนการแก้ (แยกเป็น 5 helper functions):</p>
+    <pre><span class="comment">// 1. แยก: สร้าง dedup sets (~35 บรรทัด)</span>
+<span class="keyword">function</span> <span class="fn">buildAliasDedupSets_</span>() {
+  <span class="keyword">var</span> existingPersonAliasSet = <span class="keyword">new</span> Set();
+  <span class="keyword">var</span> existingPlaceAliasSet = <span class="keyword">new</span> Set();
+  <span class="keyword">var</span> existingGlobalAliasSet = <span class="keyword">new</span> Set();
+  <span class="comment">// ... โหลดจาก M_PERSON_ALIAS, M_PLACE_ALIAS, M_ALIAS</span>
+  <span class="keyword">return</span> { existingPersonAliasSet, existingPlaceAliasSet, existingGlobalAliasSet };
+}
+
+<span class="comment">// 2. แยก: สร้าง PERSON alias rows (~55 บรรทัด)</span>
+<span class="keyword">function</span> <span class="fn">buildPersonAliasRows_</span>(factBatch, personMap, dedupSets) { ... }
+
+<span class="comment">// 3. แยก: สร้าง PLACE alias rows (~50 บรรทัด)</span>
+<span class="keyword">function</span> <span class="fn">buildPlaceAliasRows_</span>(factBatch, placeMap, dedupSets) { ... }
+
+<span class="comment">// 4. แยก: Batch write 3 ชีต (~30 บรรทัด)</span>
+<span class="keyword">function</span> <span class="fn">batchWriteAliasSheets_</span>(globalRows, personRows, placeRows) { ... }
+
+<span class="comment">// 5. Main: orchestrator (~40 บรรทัด)</span>
+<span class="keyword">function</span> <span class="fn">autoEnrichAliasesFromFactBatch_</span>(factBatch) {
+  <span class="keyword">if</span> (!factBatch || !factBatch.length) <span class="keyword">return</span>;
+  <span class="keyword">var</span> personMap = PersonService.loadAllPersons()...;
+  <span class="keyword">var</span> placeMap = PlaceService.loadAllPlaces()...;
+  <span class="keyword">var</span> dedupSets = buildAliasDedupSets_();
+  <span class="keyword">var</span> personRows = buildPersonAliasRows_(factBatch, personMap, dedupSets);
+  <span class="keyword">var</span> placeRows = buildPlaceAliasRows_(factBatch, placeMap, dedupSets);
+  batchWriteAliasSheets_(personRows.global, personRows.person, placeRows.place);
+  logInfo(<span class="string">'Aliases created: ...'</span>);
+}</pre>
+  </div>
+</div>
+
+<!-- ==================== SECTION 4: MULTI-RESPONSIBILITY ==================== -->
+<div class="page-break"></div>
+<h1>4. Function ที่ทำหลายหน้าที่ (Multi-Responsibility)</h1>
+
+<p>กฎข้อ 2 (Single Responsibility): ฟังก์ชันเดียว = 1 หน้าที่ ถ้าต้องใช้คำว่า "และ" อธิบาย = ละเมิดกฎ</p>
+
+<div class="refactor-card severity-high">
+  <div class="header">
+    <span class="title">Refactor #2: applyReviewDecision (204 บรรทัด)</span>
+    <span class="badge badge-high">HIGH</span>
+  </div>
+  <div class="meta">ไฟล์: <code>12_ReviewService.gs:194-397</code></div>
+  <div class="problem">
+    <p>ที่ผ่านมามีหน้าที่หลายอย่าง: [1] หา row ใน Q_REVIEW [2] ระบุ reviewer [3] จัดการ CREATE_NEW [4] จัดการ MERGE_TO_CANDIDATE [5] จัดการ ESCALATE [6] จัดการ IGNORE [7] อัปเดต review status (ซ้ำ 4 ครั้งในแต่ละ case)</p>
+  </div>
+  <div class="fix">
+    <p class="font-semibold">แยกเป็น:</p>
+    <ul class="list-disc">
+      <li><code>findReviewRow_()</code> &mdash; หา target row ใน Q_REVIEW</li>
+      <li><code>handleCreateNewDecision_()</code> &mdash; จัดการ CREATE_NEW case</li>
+      <li><code>updateReviewRowStatus_()</code> &mdash; อัปเดต status (DRY up 4 บล็อกที่ซ้ำกัน)</li>
+      <li>Main: orchestrator เรียก helper ตาม decision type</li>
+    </ul>
+  </div>
+</div>
+
+<div class="refactor-card severity-high">
+  <div class="header">
+    <span class="title">Refactor #3: fetchDataFromSCGJWD (159 บรรทัด)</span>
+    <span class="badge badge-high">HIGH</span>
+  </div>
+  <div class="meta">ไฟล์: <code>18_ServiceSCG.gs:66-224</code></div>
+  <div class="problem">
+    <p>ทำหลายหน้าที่: [1] อ่าน Cookie + ShipmentNos [2] เรียก SCG API [3] แปลง JSON เป็น flat rows [4] Aggregate shop-level data [5] เขียน Daily Job sheet [6] เรียก downstream functions</p>
+  </div>
+  <div class="fix">
+    <ul class="list-disc">
+      <li><code>flattenSCGResponse_()</code> &mdash; แปลง JSON response เป็น flat rows</li>
+      <li><code>aggregateShopData_()</code> &mdash; รวมข้อมูลระดับร้านค้า</li>
+      <li><code>writeDailyJobSheet_()</code> &mdash; เขียนข้อมูลลงชีต + format</li>
+    </ul>
+  </div>
+</div>
+
+<div class="refactor-card severity-medium">
+  <div class="header">
+    <span class="title">Refactor #4: MIGRATION_HybridAliasSystem (136 บรรทัด)</span>
+    <span class="badge badge-medium">MEDIUM</span>
+  </div>
+  <div class="meta">ไฟล์: <code>21_AliasService.gs:452-587</code></div>
+  <div class="problem">
+    <p>ทำหลายหน้าที่: [1] ยืนยันกับผู้ใช้ [2] กำหนด master_uuid [3] ล้าง cache [4] Migrate M_PERSON_ALIAS [5] Migrate M_PLACE_ALIAS [6] เรียก populateAlias [7] แสดงผล</p>
+    <p>ข้อ 4 และ 5 มีโครงสร้างเหมือนกันแทบทุกประการ &mdash; ต่างกันแค่ sheet name, index constants, entity type</p>
+  </div>
+  <div class="fix">
+    <ul class="list-disc">
+      <li><code>migrateEntityAliases_(entityType, sheetName, idxConstants)</code> &mdash; รวมข้อ 4+5 เป็น parameterized function</li>
+      <li>Main: orchestrator เรียก <code>migrateEntityAliases_('PERSON', ...)</code> และ <code>migrateEntityAliases_('PLACE', ...)</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="refactor-card severity-medium">
+  <div class="header">
+    <span class="title">Refactor #5: executeDecision (107 บรรทัด)</span>
+    <span class="badge badge-medium">MEDIUM</span>
+  </div>
+  <div class="meta">ไฟล์: <code>10_MatchEngine.gs:652-758</code></div>
+  <div class="problem">
+    <p>ทำหลายหน้าที่: [1] Geo enrichment [2] สร้าง GeoPoint [3] AUTO_MATCH branch [4] CREATE_NEW branch [5] REVIEW branch [6] upsertFactDelivery</p>
+  </div>
+  <div class="fix">
+    <ul class="list-disc">
+      <li><code>executeAutoMatch_()</code> &mdash; จัดการ AUTO_MATCH branch</li>
+      <li><code>executeCreateNew_()</code> &mdash; จัดการ CREATE_NEW branch</li>
+      <li><code>executeReview_()</code> &mdash; จัดการ REVIEW branch</li>
+    </ul>
+  </div>
+</div>
+
+<div class="refactor-card severity-medium">
+  <div class="header">
+    <span class="title">Refactor #6: ฟังก์ชันอื่น ๆ ที่ทำหลายหน้าที่</span>
+    <span class="badge badge-medium">MEDIUM</span>
+  </div>
+  <div class="problem">
+    <table>
+      <tr><th>ฟังก์ชัน</th><th>ไฟล์:บรรทัด</th><th>หน้าที่ที่ควรแยก</th></tr>
+      <tr><td>diagnoseSystemState</td><td>00_App.gs:639</td><td>validateSheetsAndSchema_(), auditSourceData_(), auditSysLogErrors_()</td></tr>
+      <tr><td>buildFullQualityReport</td><td>13_ReportService.gs:74</td><td>countFactMatchStatuses_()</td></tr>
+      <tr><td>upsertFactDelivery</td><td>11_TransactionService.gs:68</td><td>resolveGeoLatLng_(), formatDeliveryDateTime_(), buildFactRow_()</td></tr>
+      <tr><td>findBestGeoByPersonPlace</td><td>17_SearchService.gs:78</td><td>tryTier0_() ถึง tryTierE_() (7 ระดับ cascade)</td></tr>
+      <tr><td>runLookupEnrichment</td><td>17_SearchService.gs:250</td><td>mapResultToOutput_(), batchWriteLookupResults_()</td></tr>
+      <tr><td>generatePersonAliasesFromHistory</td><td>19_Hardening.gs:188</td><td>loadPersonAliasContext_(), computeNewAliases_(), writeGlobalAliasesBatch_()</td></tr>
+      <tr><td>getEnrichedGeoData</td><td>07_PlaceService.gs:324</td><td>tryGeoLevel0_() ถึง tryGeoLevel3_() (4 ระดับ cascade)</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== SECTION 5: DUPLICATE CODE ==================== -->
+<div class="page-break"></div>
+<h1>5. Duplicate Code Patterns (9 รูปแบบ)</h1>
+
+<p>กฎข้อ 8 (Namespace) และกฎข้อ 4 (Batch Operations): โค้ดที่ซ้ำกันทำให้บำรุงรักษายาก แก้ไขที่เดียวต้องแก้หลายที่</p>
+
+<div class="refactor-card severity-high">
+  <div class="header">
+    <span class="title">Duplicate #1: Cache Read Pattern (8 จุด)</span>
+    <span class="badge badge-high">HIGH</span>
+  </div>
+  <div class="problem">
+    <p>รูปแบบ <code>CacheService.getScriptCache() + cache.get + JSON.parse</code> ซ้ำใน 6 ไฟล์ 8 จุด:</p>
+    <table>
+      <tr><th>ไฟล์</th><th>บรรทัด</th><th>ฟังก์ชัน</th></tr>
+      <tr><td>06_PersonService.gs</td><td>424-426</td><td>loadAllPersons_</td></tr>
+      <tr><td>06_PersonService.gs</td><td>458-460</td><td>loadAllAliases_</td></tr>
+      <tr><td>07_PlaceService.gs</td><td>644-646</td><td>loadAllPlaces_</td></tr>
+      <tr><td>07_PlaceService.gs</td><td>680-682</td><td>loadAllPlaceAliases_</td></tr>
+      <tr><td>08_GeoService.gs</td><td>323-325</td><td>loadAllGeos_</td></tr>
+      <tr><td>09_DestinationService.gs</td><td>268-270</td><td>loadAllDestinations_</td></tr>
+      <tr><td>16_GeoDictionaryBuilder.gs</td><td>390</td><td>loadGeoDict_</td></tr>
+      <tr><td>16_GeoDictionaryBuilder.gs</td><td>399</td><td>loadGeoDictKeys_</td></tr>
+    </table>
+  </div>
+  <div class="fix">
+    <pre><span class="comment">// สร้าง utility function ใน 14_Utils.gs</span>
+<span class="keyword">function</span> <span class="fn">cachedLoad_</span>(cacheKey, loaderFn) {
+  <span class="keyword">var</span> cache = CacheService.getScriptCache();
+  <span class="keyword">var</span> cached = cache.get(cacheKey);
+  <span class="keyword">if</span> (cached) {
+    <span class="keyword">try</span> { <span class="keyword">return</span> JSON.parse(cached); }
+    <span class="keyword">catch</span>(e) { <span class="comment">/* fallback to reload */</span> }
+  }
+  <span class="keyword">var</span> data = loaderFn();
+  <span class="keyword">try</span> { cache.put(cacheKey, JSON.stringify(data), 300); } <span class="keyword">catch</span>(e) {}
+  <span class="keyword">return</span> data;
+}
+
+<span class="comment">// ตัวอย่างการใช้ (แทนที่ 8 จุด)</span>
+<span class="keyword">function</span> <span class="fn">loadAllPersons_</span>() {
+  <span class="keyword">return</span> cachedLoad_(CACHE_KEY_PERSON, <span class="keyword">function</span>() {
+    <span class="keyword">return</span> readSheetData_(SHEET.M_PERSON);
+  });
+}</pre>
+  </div>
+</div>
+
+<div class="refactor-card severity-high">
+  <div class="header">
+    <span class="title">Duplicate #2: Stats Update Pattern (3 จุด &mdash; เกือบเหมือนกัน)</span>
+    <span class="badge badge-high">HIGH</span>
+  </div>
+  <div class="problem">
+    <p>ฟังก์ชัน updatePersonStats, updatePlaceStats, updateGeoStats มีโครงสร้างเหมือนกันแทบทุกประการ:</p>
+    <ol class="list-disc">
+      <li>Get sheet by name</li>
+      <li>Read ID column, loop to find targetRow</li>
+      <li>setValue(lastSeenCol, new Date())</li>
+      <li>getValue(usageCountCol), increment, setValue</li>
+      <li>Invalidate cache</li>
+    </ol>
+    <table>
+      <tr><th>ไฟล์</th><th>บรรทัด</th><th>ฟังก์ชัน</th></tr>
+      <tr><td>06_PersonService.gs</td><td>314-351</td><td>updatePersonStats</td></tr>
+      <tr><td>07_PlaceService.gs</td><td>595-629</td><td>updatePlaceStats</td></tr>
+      <tr><td>08_GeoService.gs</td><td>280-315</td><td>updateGeoStats</td></tr>
+    </table>
+  </div>
+  <div class="fix">
+    <pre><span class="comment">// สร้าง generic utility</span>
+<span class="keyword">function</span> <span class="fn">updateEntityStats_</span>(sheetName, idIdx, idValue,
+    lastSeenIdx, usageCountIdx, cacheKey) {
+  <span class="keyword">var</span> sheet = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName(sheetName);
+  <span class="keyword">var</span> ids = sheet.getRange(2, idIdx + 1,
+    sheet.getLastRow() - 1, 1).getValues();
+  <span class="keyword">for</span> (<span class="keyword">var</span> i = 0; i < ids.length; i++) {
+    <span class="keyword">if</span> (ids[i][0] === idValue) {
+      sheet.getRange(i + 2, lastSeenIdx + 1)
+        .setValue(<span class="keyword">new</span> Date());
+      <span class="keyword">var</span> count = sheet.getRange(i + 2, usageCountIdx + 1)
+        .getValue();
+      sheet.getRange(i + 2, usageCountIdx + 1)
+        .setValue((count || 0) + 1);
+      <span class="keyword">break</span>;
+    }
+  }
+  CacheService.getScriptCache().remove(cacheKey);
+}</pre>
+  </div>
+</div>
+
+<div class="refactor-card severity-medium">
+  <div class="header">
+    <span class="title">Duplicate #3: Cache Invalidation (8+ จุด + ซ้ำซ้อน)</span>
+    <span class="badge badge-medium">MEDIUM</span>
+  </div>
+  <div class="problem">
+    <p>รูปแบบ <code>CacheService.getScriptCache().remove(key)</code> กระจายใน 8+ จุด และ M_GLOBAL_ALIAS cache invalidation ซ้ำใน 2 ไฟล์:</p>
+    <ul class="list-disc">
+      <li><code>10_MatchEngine.gs:461-462</code></li>
+      <li><code>21_AliasService.gs:131-132</code></li>
+    </ul>
+  </div>
+  <div class="fix">
+    <p>สร้าง <code>invalidateCache_(...keys)</code> utility ใน 14_Utils.gs และเรียกจากทุกที่ที่ต้องการล้าง cache</p>
+  </div>
+</div>
+
+<div class="refactor-card severity-medium">
+  <div class="header">
+    <span class="title">Duplicate #4: Review Status Update (ซ้ำ 4 ครั้งในไฟล์เดียว)</span>
+    <span class="badge badge-medium">MEDIUM</span>
+  </div>
+  <div class="problem">
+    <p>ใน <code>12_ReviewService.gs</code> บล็อกอัปเดต review status ซ้ำกัน 4 ครั้งในแต่ละ switch case (บรรทัด 343-347, 365-369, 374-377, 383-386)</p>
+  </div>
+  <div class="fix">
+    <p>แยกเป็น <code>updateReviewRowStatus_(sheet, targetRow, status, reviewer, now, decisionVal, note?)</code></p>
+  </div>
+</div>
+
+<div class="refactor-card severity-medium">
+  <div class="header">
+    <span class="title">Duplicate #5-9: รูปแบบอื่น ๆ</span>
+    <span class="badge badge-medium">MEDIUM</span>
+  </div>
+  <div class="problem">
+    <table>
+      <tr><th>#</th><th>รูปแบบ</th><th>จำนวนจุด</th><th>ไฟล์ที่พบ</th></tr>
+      <tr><td>5</td><td>Cache Write (cache.put + JSON.stringify)</td><td>6+</td><td>06, 07, 08, 09, 21</td></tr>
+      <tr><td>6</td><td>Sheet Data Load (getSheetByName + getRange + getValues)</td><td>25+</td><td>12 ไฟล์</td></tr>
+      <tr><td>7</td><td>Required Sheets List (ซ้ำใน 00_App.gs)</td><td>2</td><td>00_App.gs:516, 00_App.gs:651</td></tr>
+      <tr><td>8</td><td>haversineDistance wrapper (ไม่จำเป็น)</td><td>1</td><td>08_GeoService.gs:395 &rarr; เรียก 14_Utils.gs:183</td></tr>
+      <tr><td>9</td><td>Sync Status Check pattern</td><td>3</td><td>00_App.gs:461, 00_App.gs:703, 19_Hardening.gs:108</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== SECTION 6: CONSTANTS OUTSIDE CONFIG ==================== -->
+<div class="page-break"></div>
+<h1>6. Constants กระจายนอก 01_Config.gs</h1>
+
+<p>กฎข้อ 3 (No Hardcode Index) และกฎข้อ 9 (No Global State): constants ทั้งหมดควรอยู่ใน <code>01_Config.gs</code></p>
+
+<h2>6.1 Index Constants ที่ควรย้าย</h2>
+
+<div class="refactor-card severity-high">
+  <div class="header">
+    <span class="title">MAPS_CACHE_IDX (7 constants) ใน 15_GoogleMapsAPI.gs</span>
+    <span class="badge badge-high">HIGH</span>
+  </div>
+  <div class="problem">
+    <table>
+      <tr><th>Constant</th><th>บรรทัด</th><th>ค่า</th></tr>
+      <tr><td><code>MC_KEY</code></td><td>65</td><td>0</td></tr>
+      <tr><td><code>MC_LAT</code></td><td>66</td><td>2</td></tr>
+      <tr><td><code>MC_LNG</code></td><td>67</td><td>3</td></tr>
+      <tr><td><code>MC_ADDR</code></td><td>68</td><td>4</td></tr>
+      <tr><td><code>MC_HIT</code></td><td>69</td><td>7</td></tr>
+      <tr><td><code>MC_PROV</code></td><td>70</td><td>8</td></tr>
+      <tr><td><code>MC_DIST</code></td><td>71</td><td>9</td></tr>
+    </table>
+  </div>
+  <div class="fix">
+    <p>ย้ายไป <code>01_Config.gs</code> เป็น <code>MAPS_CACHE_IDX = { KEY: 0, LAT: 2, LNG: 3, ADDR: 4, HIT: 7, PROV: 8, DIST: 9 }</code></p>
+  </div>
+</div>
+
+<div class="refactor-card severity-medium">
+  <div class="header">
+    <span class="title">Cache Key + Column Constants ในไฟล์อื่น</span>
+    <span class="badge badge-medium">MEDIUM</span>
+  </div>
+  <div class="problem">
+    <table>
+      <tr><th>Constant</th><th>ไฟล์:บรรทัด</th><th>ค่า</th></tr>
+      <tr><td><code>CACHE_KEY_SOURCE</code></td><td>04_SourceRepository.gs:65</td><td>'SOURCE_ROWS_V3'</td></tr>
+      <tr><td><code>CACHE_KEY_INVOICES</code></td><td>04_SourceRepository.gs:66</td><td>'PROCESSED_INVOICES_V3'</td></tr>
+      <tr><td><code>SRC_READ_COLS</code></td><td>04_SourceRepository.gs:70</td><td>37</td></tr>
+      <tr><td><code>GEO_GRID_SIZE</code></td><td>08_GeoService.gs:63</td><td>0.01</td></tr>
+    </table>
+  </div>
+</div>
+
+<h2>6.2 Dictionary Constants ที่ควรย้าย</h2>
+
+<div class="refactor-card severity-medium">
+  <div class="header">
+    <span class="title">5 Dictionary Constants ใน 05_NormalizeService.gs</span>
+    <span class="badge badge-medium">MEDIUM</span>
+  </div>
+  <div class="problem">
+    <table>
+      <tr><th>Constant</th><th>บรรทัด</th><th>ประเภท</th></tr>
+      <tr><td><code>PERSON_PREFIX_LIST</code></td><td>70</td><td>Dictionary: คำนำหน้าชื่อ</td></tr>
+      <tr><td><code>SORTED_PREFIX_LIST</code></td><td>101</td><td>Derived: เรียงตามความยาว</td></tr>
+      <tr><td><code>COMPANY_SUFFIX_LIST</code></td><td>109</td><td>Dictionary: สกุลบริษัท</td></tr>
+      <tr><td><code>CHAIN_STORE_LIST</code></td><td>118</td><td>Dictionary: ชื่อร้านค้าห่วงโซ่</td></tr>
+      <tr><td><code>DELIVERY_NOTE_LIST</code></td><td>125</td><td>Dictionary: หมายเหตุการจัดส่ง</td></tr>
+    </table>
+  </div>
+  <div class="fix">
+    <p>ย้ายไป <code>01_Config.gs</code> ในส่วน <code>NORMALIZE_CONFIG</code> หรือสร้าง <code>NORMALIZE_DICT</code> object</p>
+  </div>
+</div>
+
+<h2>6.3 Hardcoded Sheet Names</h2>
+
+<div class="refactor-card severity-high">
+  <div class="header">
+    <span class="title">2 ชื่อชีตที่ hardcoded แทนใช้ SHEET constant</span>
+    <span class="badge badge-high">HIGH</span>
+  </div>
+  <div class="problem">
+    <table>
+      <tr><th>ไฟล์:บรรทัด</th><th>โค้ด</th><th>ควรใช้</th></tr>
+      <tr><td>18_ServiceSCG.gs:304</td><td><code>getSheetByName("สรุป_เจ้าของสินค้า")</code></td><td><code>SHEET.OWNER_SUMMARY</code></td></tr>
+      <tr><td>18_ServiceSCG.gs:353</td><td><code>getSheetByName("สรุป_Shipment")</code></td><td><code>SHEET.SHIPMENT_SUM</code></td></tr>
+    </table>
+    <p class="text-sm text-muted mt-8">หมายเหตุ: <code>SHEET.OWNER_SUMMARY</code> และ <code>SHEET.SHIPMENT_SUM</code> มีอยู่แล้วใน 01_Config.gs แต่ไม่ถูกใช้</p>
+  </div>
+</div>
+
+<h2>6.4 Hardcoded Status/Action Strings</h2>
+
+<div class="refactor-card severity-medium">
+  <div class="header">
+    <span class="title">12 จุดที่ใช้ string hardcoded แทน constants</span>
+    <span class="badge badge-medium">MEDIUM</span>
+  </div>
+  <div class="problem">
+    <table>
+      <tr><th>ไฟล์:บรรทัด</th><th>String</th><th>ควรเป็น constant</th></tr>
+      <tr><td>10_MatchEngine.gs:561</td><td>'REVIEW'</td><td>DECISION.REVIEW</td></tr>
+      <tr><td>10_MatchEngine.gs:635</td><td>'CREATE_NEW'</td><td>DECISION.CREATE_NEW</td></tr>
+      <tr><td>10_MatchEngine.gs:569</td><td>'INVALID_LATLNG'</td><td>REASON.INVALID_LATLNG</td></tr>
+      <tr><td>12_ReviewService.gs:340</td><td>'REVIEW_APPROVED'</td><td>REASON.REVIEW_APPROVED</td></tr>
+      <tr><td>12_ReviewService.gs:343</td><td>'Done'</td><td>REVIEW_STATUS.DONE</td></tr>
+      <tr><td>12_ReviewService.gs:374</td><td>'Escalated'</td><td>REVIEW_STATUS.ESCALATED</td></tr>
+      <tr><td>18_ServiceSCG.gs:253</td><td>["BETTERBE","SCG EXPRESS",...]</td><td>EPOD_OWNERS</td></tr>
+      <tr><td>10_MatchEngine.gs:219</td><td>'ERROR'</td><td>SYNC_STATUS.ERROR</td></tr>
+    </table>
+  </div>
+</div>
+
+<h2>6.5 Magic Numbers</h2>
+
+<div class="refactor-card severity-low">
+  <div class="header">
+    <span class="title">11 จุดที่ใช้ตัวเลข hardcoded</span>
+    <span class="badge badge-low">LOW</span>
+  </div>
+  <div class="problem">
+    <table>
+      <tr><th>ไฟล์:บรรทัด</th><th>ค่า</th><th>ควรเป็น</th></tr>
+      <tr><td>10_MatchEngine.gs:594-597</td><td>0.5, 0.3, 0.2</td><td>MATCH_WEIGHT_FULL</td></tr>
+      <tr><td>10_MatchEngine.gs:609-611</td><td>0.60, 0.25, 0.15</td><td>MATCH_WEIGHT_PARTIAL</td></tr>
+      <tr><td>10_MatchEngine.gs:578,587</td><td>50</td><td>CONFIDENCE.LOW</td></tr>
+      <tr><td>10_MatchEngine.gs:608</td><td>95</td><td>CONFIDENCE.CAP</td></tr>
+      <tr><td>12_ReviewService.gs:340</td><td>95</td><td>CONFIDENCE.REVIEW_APPROVED</td></tr>
+      <tr><td>14_Utils.gs:300</td><td>'gemini-1.5-flash'</td><td>AI_CONFIG.MODEL (ซ้ำ!)</td></tr>
+      <tr><td>14_Utils.gs:311-314</td><td>0.1, 1, 1, 2048</td><td>AI_CONFIG ที่มีอยู่แล้ว</td></tr>
+      <tr><td>18_ServiceSCG.gs:71</td><td>10000</td><td>APP_CONST.LOCK_TIMEOUT_MS</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== SECTION 7: PRIORITY & ACTION PLAN ==================== -->
+<div class="page-break"></div>
+<h1>7. ลำดับความสำคัญและแผนดำเนินการ</h1>
+
+<p>จัดลำดับตามผลกระทบต่อระบบ &mdash; ด่วนที่สุดก่อน:</p>
+
+<h2>Phase 1: ด่วน (สัปดาห์ที่ 1-2)</h2>
+
+<div class="refactor-card severity-high">
+  <table>
+    <tr><th>ลำดับ</th><th>งาน</th><th>ไฟล์</th><th>เหตุผล</th></tr>
+    <tr><td>P1-1</td><td>ย้าย MAPS_CACHE_IDX ไป 01_Config.gs</td><td>15_GoogleMapsAPI.gs, 01_Config.gs</td><td>7 index constants ผิดกฎข้อ 3 เสี่ยงพังเมื่อคอลัมน์เปลี่ยน</td></tr>
+    <tr><td>P1-2</td><td>แก้ hardcoded sheet names</td><td>18_ServiceSCG.gs:304,353</td><td>SHEET constants มีอยู่แล้วแต่ไม่ใช้ ผิดกฎข้อ 3</td></tr>
+    <tr><td>P1-3</td><td>สร้าง cachedLoad_() + cachedStore_() utilities</td><td>14_Utils.gs + 6 ไฟล์</td><td>ลด duplicate code 8+ จุด เพิ่ม cache consistency</td></tr>
+    <tr><td>P1-4</td><td>สร้าง updateEntityStats_() utility</td><td>14_Utils.gs + 3 ไฟล์</td><td>รวม 3 ฟังก์ชันเกือบเหมือนกันเป็น 1</td></tr>
+  </table>
+</div>
+
+<h2>Phase 2: ปานกลาง (สัปดาห์ที่ 3-4)</h2>
+
+<div class="refactor-card severity-medium">
+  <table>
+    <tr><th>ลำดับ</th><th>งาน</th><th>ไฟล์</th><th>เหตุผล</th></tr>
+    <tr><td>P2-1</td><td>แยก autoEnrichAliasesFromFactBatch_ เป็น 5 helpers</td><td>10_MatchEngine.gs</td><td>266 บรรทัด ใหญ่ที่สุด ผิดกฎข้อ 1+2</td></tr>
+    <tr><td>P2-2</td><td>แยก applyReviewDecision เป็น 3 helpers</td><td>12_ReviewService.gs</td><td>204 บรรทัด + review status ซ้ำ 4 ครั้ง</td></tr>
+    <tr><td>P2-3</td><td>แยก fetchDataFromSCGJWD เป็น 3 helpers</td><td>18_ServiceSCG.gs</td><td>159 บรรทัด ทำ 6 หน้าที่ (SCG API Fetch code ห้ามแก้ &mdash; แยกส่วนอื่นเท่านั้น)</td></tr>
+    <tr><td>P2-4</td><td>ย้าย dictionary constants ไป 01_Config.gs</td><td>05_NormalizeService.gs</td><td>5 dictionary constants ผิดกฎข้อ 9</td></tr>
+    <tr><td>P2-5</td><td>สร้าง DECISION, REASON, REVIEW_STATUS constants</td><td>01_Config.gs + 2 ไฟล์</td><td>12 hardcoded strings ผิดกฎข้อ 3</td></tr>
+  </table>
+</div>
+
+<h2>Phase 3: ปรับปรุง (สัปดาห์ที่ 5-6)</h2>
+
+<div class="refactor-card severity-low">
+  <table>
+    <tr><th>ลำดับ</th><th>งาน</th><th>ไฟล์</th><th>เหตุผล</th></tr>
+    <tr><td>P3-1</td><td>แยก executeDecision เป็น 3 branch helpers</td><td>10_MatchEngine.gs</td><td>107 บรรทัด 3 branch แยกกัน</td></tr>
+    <tr><td>P3-2</td><td>รวม migratePersonAliases_ + migratePlaceAliases_</td><td>21_AliasService.gs</td><td>โครงสร้างเหมือนกัน &mdash; parameterized function</td></tr>
+    <tr><td>P3-3</td><td>แยก findBestGeoByPersonPlace เป็น tier helpers</td><td>17_SearchService.gs</td><td>7-level cascade ยาก test</td></tr>
+    <tr><td>P3-4</td><td>แยก getEnrichedGeoData เป็น level helpers</td><td>07_PlaceService.gs</td><td>4-level cascade</td></tr>
+    <tr><td>P3-5</td><td>ลบ haversineDistance wrapper ใน 08_GeoService.gs</td><td>08_GeoService.gs</td><td>ไม่จำเป็น เรียก haversineDistanceM() โดยตรง</td></tr>
+    <tr><td>P3-6</td><td>ย้าย match weight + confidence constants</td><td>01_Config.gs</td><td>11 magic numbers</td></tr>
+    <tr><td>P3-7</td><td>แก้ Gemini API config ที่ซ้ำกับ AI_CONFIG</td><td>14_Utils.gs:300-314</td><td>Model, URL, params ซ้ำ AI_CONFIG ที่มีอยู่</td></tr>
+    <tr><td>P3-8</td><td>รวม requiredSheets arrays ใน 00_App.gs</td><td>00_App.gs</td><td>2 arrays ซ้ำซ้อน</td></tr>
+  </table>
+</div>
+
+<h2>ข้อจำกัดที่ต้องระวัง</h2>
+
+<div class="refactor-card severity-high">
+  <div class="problem">
+    <ul class="list-disc">
+      <li><span class="font-bold">SCG API Fetch code ห้ามแก้ไข</span> &mdash; ส่วนที่เรียก SCG API ใน fetchDataFromSCGJWD ต้องไม่ถูกแก้ไขหรือลบ แยก helper ได้เฉพาะส่วนอื่น</li>
+      <li><span class="font-bold">Two-Group Architecture</span> &mdash; Group 1 (Cleansing & Master DB) กับ Group 2 (Daily Ops) ต้องแยกชัดเจน</li>
+      <li><span class="font-bold">SHIP_TO_NAME (Index 10)</span> &mdash; คอลัมน์เป้าหมายสำหรับ cleansing ไม่ใช่ SoldToName</li>
+      <li><span class="font-bold">autoEnrichAliasesFromFactBatch_ เป็น Single Writer</span> &mdash; การแยกต้องรักษา Single Writer Rule ของ M_ALIAS</li>
+    </ul>
+  </div>
+</div>
+
+</body>
+</html>
