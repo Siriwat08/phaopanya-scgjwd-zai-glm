@@ -186,124 +186,130 @@ function detectDoubleProcessing() {
   }
 }
 
-/**
- * generatePersonAliasesFromHistory — [UPGRADE v5.2.010] สร้าง Alias อัตโนมัติจากประวัติ FACT_DELIVERY
- * [FIX v5.4.000] เพิ่มการเขียน Global Alias ลง M_ALIAS ควบคู่กับ M_PERSON_ALIAS
- */
+
+// ============================================================
+// [BUG-B1 REWRITE] generatePersonAliasesFromHistory
+// FIX: รวบ global alias rows ใน array แล้ว batch write ครั้งเดียว
+//      แทน createGlobalAlias() ใน forEach (O(N²) → O(N))
+// ============================================================
 function generatePersonAliasesFromHistory() {
   try {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
-  const aliasSheet = ss.getSheetByName(SHEET.M_PERSON_ALIAS);
-  if (!factSheet || !aliasSheet) {
-    SpreadsheetApp.getUi().alert('❌ ไม่พบชีต FACT_DELIVERY หรือ M_PERSON_ALIAS');
-    return;
-  }
-
-  const factRows = factSheet.getLastRow();
-  if (factRows < 2) {
-    SpreadsheetApp.getUi().alert('ℹ️ ไม่มีข้อมูลประวัติใน FACT_DELIVERY');
-    return;
-  }
-
-  ss.toast('กำลังวิเคราะห์ประวัติการจัดส่งเพื่อสร้าง Alias...', 'Processing', 5);
-
-  const factData = factSheet.getRange(2, 1, factRows - 1, SCHEMA[SHEET.FACT_DELIVERY].length).getValues();
-  
-  // โหลดรายชื่อ Person หลักเพื่อตรวจสอบ
-  const allPersons = loadAllPersons_();
-  const personMap = new Map();
-  // [FIX v5.4.000] เก็บ masterUuid ไว้ด้วยเพื่อเขียน M_ALIAS
-  const personUuidMap = new Map();
-  allPersons.forEach(p => {
-    if (p.personId && p.canonical) {
-      personMap.set(p.personId, normalizeForCompare(p.canonical));
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
+    var aliasSheet = ss.getSheetByName(SHEET.M_PERSON_ALIAS);
+    if (!factSheet || !aliasSheet) {
+      SpreadsheetApp.getUi().alert('❌ ไม่พบชีต FACT_DELIVERY หรือ M_PERSON_ALIAS');
+      return;
     }
-    if (p.personId && p.masterUuid) {
-      personUuidMap.set(p.personId, p.masterUuid);
+
+    var factRows = factSheet.getLastRow();
+    if (factRows < 2) {
+      SpreadsheetApp.getUi().alert('ℹ️ ไม่มีข้อมูลประวัติใน FACT_DELIVERY');
+      return;
     }
-  });
 
-  // โหลด Alias ที่มีอยู่แล้ว
-  const existingAliasSet = new Set();
-  const existingAliasData = loadAllAliases_();
-  existingAliasData.forEach(r => {
-    if (!r[PERSON_ALIAS_IDX.ACTIVE_FLAG]) return;
-    const pId = String(r[PERSON_ALIAS_IDX.PERSON_ID] || '').trim();
-    const aNorm = normalizeForCompare(r[PERSON_ALIAS_IDX.ALIAS_NAME]);
-    if (pId && aNorm) {
-      existingAliasSet.add(pId + '::' + aNorm);
-    }
-  });
+    ss.toast('กำลังวิเคราะห์ประวัติการจัดส่งเพื่อสร้าง Alias...', 'Processing', 5);
 
-  const newAliasRows = [];
-  const globalAliasCalls = []; // [FIX v5.4.000] เก็บข้อมูลสำหรับเขียน M_ALIAS
-  let addedCount = 0;
+    var factData = factSheet.getRange(2, 1, factRows - 1, SCHEMA[SHEET.FACT_DELIVERY].length).getValues();
 
-  factData.forEach(r => {
-    const pId = String(r[FACT_IDX.PERSON_ID] || '').trim();
-    const rawName = String(r[FACT_IDX.SHIP_TO_NAME] || '').trim();
-    if (!pId || !rawName) return;
+    // โหลด Person Map (canonical + uuid)
+    var allPersons = loadAllPersons_();
+    var personCanonicalMap = new Map();
+    var personUuidMap = new Map();
+    allPersons.forEach(function(p) {
+      if (p.personId && p.canonical) {
+        personCanonicalMap.set(p.personId, normalizeForCompare(p.canonical));
+      }
+      if (p.personId && p.masterUuid) {
+        personUuidMap.set(p.personId, p.masterUuid);
+      }
+    });
 
-    const rawNorm = normalizeForCompare(rawName);
-    if (!rawNorm || rawNorm.length < 2) return;
+    // โหลด M_PERSON_ALIAS dedup set
+    var existingAliasSet = new Set();
+    var existingAliasData = loadAllAliases_();
+    existingAliasData.forEach(function(r) {
+      if (!r[PERSON_ALIAS_IDX.ACTIVE_FLAG]) return;
+      var pId  = String(r[PERSON_ALIAS_IDX.PERSON_ID] || '').trim();
+      var aNorm = normalizeForCompare(r[PERSON_ALIAS_IDX.ALIAS_NAME]);
+      if (pId && aNorm) existingAliasSet.add(pId + '::' + aNorm);
+    });
 
-    // เช็คว่าชื่อดิบตรงกับ Canonical อยู่แล้วหรือไม่
-    const canonicalNorm = personMap.get(pId);
-    if (canonicalNorm && canonicalNorm === rawNorm) return;
+    // [BUG-B1 FIX] โหลด M_ALIAS dedup set ครั้งเดียวผ่าน helper
+    var existingGlobalAliasSet = buildGlobalAliasDedupSet_();
 
-    const key = pId + '::' + rawNorm;
-    if (!existingAliasSet.has(key)) {
-      existingAliasSet.add(key);
-      newAliasRows.push([
-        generateShortId('PA'),
-        pId,
-        rawName,
-        95,
-        new Date(),
-        true
-      ]);
-      addedCount++;
+    var newAliasRows   = [];  // สำหรับ M_PERSON_ALIAS
+    var newGlobalRows  = [];  // สำหรับ M_ALIAS
+    var now = new Date();
 
-      // [FIX v5.4.000] เก็บข้อมูลสำหรับเขียน M_ALIAS
-      const masterUuid = personUuidMap.get(pId);
+    factData.forEach(function(r) {
+      var pId     = String(r[FACT_IDX.PERSON_ID]   || '').trim();
+      var rawName = String(r[FACT_IDX.SHIP_TO_NAME] || '').trim();
+      if (!pId || !rawName) return;
+
+      var rawNorm = normalizeForCompare(rawName);
+      if (!rawNorm || rawNorm.length < 2) return;
+
+      // ข้ามถ้าชื่อดิบตรงกับ canonical อยู่แล้ว
+      var canonicalNorm = personCanonicalMap.get(pId);
+      if (canonicalNorm && canonicalNorm === rawNorm) return;
+
+      // M_PERSON_ALIAS — เพิ่ม variant ที่ยังไม่มี
+      var paKey = pId + '::' + rawNorm;
+      if (!existingAliasSet.has(paKey)) {
+        existingAliasSet.add(paKey);
+        newAliasRows.push([
+          generateShortId('PA'), pId, rawName, 95, now, true
+        ]);
+      }
+
+      // [BUG-B1 FIX] M_ALIAS — collect ลง array แทน createGlobalAlias() ใน loop
+      var masterUuid = personUuidMap.get(pId);
       if (masterUuid) {
-        globalAliasCalls.push({
-          masterUuid: masterUuid,
-          variantName: rawName,
-          entityType: 'PERSON',
-          confidence: 95,
-          source: 'HISTORY_ENRICH'
-        });
+        var globalKey = 'PERSON::' + masterUuid + '::' + rawNorm;
+        if (!existingGlobalAliasSet.has(globalKey)) {
+          existingGlobalAliasSet.add(globalKey);
+          newGlobalRows.push([
+            generateShortId('A'), masterUuid, rawName, 'PERSON',
+            95, 'HISTORY_ENRICH', now, true
+          ]);
+        }
+      }
+    });
+
+    // Batch write M_PERSON_ALIAS
+    if (newAliasRows.length > 0) {
+      aliasSheet.getRange(
+        aliasSheet.getLastRow() + 1, 1,
+        newAliasRows.length, 6
+      ).setValues(newAliasRows);
+      invalidateAliasCache_();
+    }
+
+    // [BUG-B1 FIX] Batch write M_ALIAS — 1 API call แทน N appendRow
+    var globalAliasCount = 0;
+    if (newGlobalRows.length > 0) {
+      var mAliasSheet = ss.getSheetByName(SHEET.M_ALIAS);
+      if (mAliasSheet) {
+        mAliasSheet.getRange(
+          mAliasSheet.getLastRow() + 1, 1,
+          newGlobalRows.length, SCHEMA[SHEET.M_ALIAS].length
+        ).setValues(newGlobalRows);
+        CacheService.getScriptCache().removeAll(['M_GLOBAL_ALIAS_ALL', 'M_GLOBAL_ALIAS_REVERSE']);
+        globalAliasCount = newGlobalRows.length;
       }
     }
-  });
 
-  if (newAliasRows.length > 0) {
-    // บันทึกแบบ Batch
-    aliasSheet.getRange(aliasSheet.getLastRow() + 1, 1, newAliasRows.length, 6).setValues(newAliasRows);
-    invalidateAliasCache_();
-
-    // [FIX v5.4.000] เขียน Global Alias ลง M_ALIAS
-    let globalAliasCount = 0;
-    if (typeof createGlobalAlias === 'function') {
-      globalAliasCalls.forEach(call => {
-        const result = createGlobalAlias(
-          call.masterUuid, call.variantName, call.entityType,
-          call.confidence, call.source
-        );
-        if (result) globalAliasCount++;
-      });
+    if (newAliasRows.length > 0 || globalAliasCount > 0) {
+      SpreadsheetApp.getUi().alert(
+        '✅ สร้าง Alias อัตโนมัติสำเร็จ!\n' +
+        '- เพิ่มรายชื่อสำรอง: ' + newAliasRows.length + ' รายการลงใน M_PERSON_ALIAS\n' +
+        '- เพิ่ม Global Alias: ' + globalAliasCount + ' รายการลงใน M_ALIAS'
+      );
+    } else {
+      SpreadsheetApp.getUi().alert('ℹ️ ตรวจสอบเรียบร้อย: ข้อมูล Alias อัปเดตถ้วนแล้ว ไม่มีรายการใหม่');
     }
 
-    SpreadsheetApp.getUi().alert(
-      `✅ สร้าง Alias อัตโนมัติสำเร็จ!\n` +
-      `- เพิ่มรายชื่อสำรอง: ${addedCount} รายการลงใน M_PERSON_ALIAS\n` +
-      `- เพิ่ม Global Alias: ${globalAliasCount} รายการลงใน M_ALIAS`
-    );
-  } else {
-    SpreadsheetApp.getUi().alert('ℹ️ ตรวจสอบเรียบร้อย: ข้อมูล Alias ในระบบอัปเดตครับถ้วนแล้ว ไม่มีรายการใหม่');
-  }
   } catch (err) {
     logError('Hardening', err.message + '\n' + err.stack);
     SpreadsheetApp.getUi().alert('เกิดข้อผิดพลาด: ' + err.message);
