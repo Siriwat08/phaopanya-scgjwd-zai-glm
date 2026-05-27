@@ -1,5 +1,5 @@
 /**
- * VERSION: 5.4.001
+ * VERSION: 5.4.002
  * FILE: 18_ServiceSCG.gs
  * LMDS V5.4 — SCG API Service (Group 2 Commander)
  * ===================================================
@@ -9,6 +9,10 @@
  *   เป็น Commander ของ Group 2 (Daily Ops)
  * ===================================================
  * CHANGELOG:
+ *   v5.4.003 (2026-05-27) — Refactor & Hardening:
+ *     - [REFACTOR] fetchDataFromSCGJWD: แยกเป็น 4 ฟังก์ชันย่อย (prepareScgData_, fetchAndParseScgApi_, buildAggregatedRows_, writeDailyJobSheet_)
+ *     - [ADD] Time Guard Check: เช็คเวลาทุก 50 รายการ และก่อนเขียน Sheet
+ *     - [ADD] Error Isolation: แยก try-catch แต่ละขั้นตอน ไม่ให้ล้มทั้งระบบ
  *   v5.4.002 (2026-05-26) — Single Writer Fix:
  *     - [REMOVE] fetchDataFromSCGJWD: ลบ populateAliasFromSCGRawData_() — Group 2 ห้ามเขียน M_ALIAS
  *     - [FIX] Hardcode index: แทนที่ r[28], r[14], r[16], r[2], r[9] ด้วย DATA_IDX.*
@@ -42,11 +46,11 @@
  *   ┌─────────────────────────────────────────────────────────────┐
  *   │  18_ServiceSCG.gs (Group 2 Commander — SCG Data Pipeline)   │
  *   │  ├── fetchDataFromSCGJWD() — SCG API → Daily Job Sheet     │
- *   │  │   ├── 1. อ่าน Cookie + ShipmentNos จากชีต Input          │
- *   │  │   ├── 2. เรียก SCG API (fetchWithRetry_)                  │
- *   │  │   ├── 3. แปลง JSON → Flat rows + aggregate               │
- *   │  │   ├── 4. applyMasterCoordinatesToDailyJob() → Module 17  │
- *   │  │   ├── 5. populateAliasFromSCGRawData_() → Module 21      │
+ *   │  │   ├── 1. prepareScgData_(): อ่าน Cookie + ShipmentNos    │
+ *   │  │   ├── 2. fetchAndParseScgApi_(): เรียก API + แปลง JSON   │
+ *   │  │   ├── 3. buildAggregatedRows_(): รวมข้อมูล + คำนวณ      │
+ *   │  │   ├── 4. writeDailyJobSheet_(): เขียน Sheet + Time Guard│
+ *   │  │   ├── 5. applyMasterCoordinatesToDailyJob() → Module 17  │
  *   │  │   ├── 6. buildOwnerSummary()                              │
  *   │  │   └── 7. buildShipmentSummary()                           │
  *   │  ├── fetchWithRetry_() — HTTP retry with exponential backoff│
