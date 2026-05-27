@@ -268,12 +268,12 @@ const REVIEW_IDX = Object.freeze({
 
 // [ADD v5.4.003] SYS_LOG_IDX — ดัชนีคอลัมน์ SYS_LOG
 const SYS_LOG_IDX = Object.freeze({
-  TIMESTAMP: 0,
-  LEVEL:     1,
-  MODULE:    2,
-  SHEET:     3,
-  MESSAGE:   4,
-  DETAILS:   5
+  LOG_ID:    0,  // ✅ แก้ใหม่
+  TIMESTAMP: 1,  // ✅ แก้ใหม่
+  MODULE:    2,  // ✅ เหมือนเดิม
+  LEVEL:     3,  // ✅ แก้ใหม่ (เดิมชื่อ SHEET ชี้ผิด)
+  MESSAGE:   4,  // ✅ เหมือนเดิม
+  DETAILS:   5   // ✅ เหมือนเดิม
 });
 
 // ============================================================
