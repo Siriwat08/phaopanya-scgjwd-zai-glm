@@ -2,6 +2,9 @@
  * VERSION: 5.4.001
  * FILE: 12_ReviewService.gs
  * LMDS V5.4 — Review Queue Service
+ * [FIX BUG-B2] v5.4.003: updateReviewRowStatus_() helper — 1 setValues แทน 5× setValue
+ * [FIX BUG-B2] v5.4.003: applyAllPendingDecisions — Time Guard + Batch Status
+ * [FIX BUG-A2] v5.4.003: applyAllPendingDecisions — เพิ่ม try-catch outer
  * ===================================================
  * PURPOSE:
  *   จัดการคิวรีวิว Q_REVIEW — พักข้อมูลที่ต้องให้คนตัดสินใจ
@@ -66,28 +69,22 @@
 // SECTION 1: enqueueReview
 // ============================================================
 
-/**
- * enqueueReview — เพิ่ม record เข้า Q_REVIEW
- * [FIX v003] CAND_PERSONS/PLACES/GEOS เก็บเป็น JSON array
- */
 function enqueueReview(srcObj, decision, personResult, placeResult, geoResult) {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
   if (!sheet) {
-    logError('ReviewService', `ไม่พบชีต ${SHEET.Q_REVIEW}`);
+    logError('ReviewService', 'ไม่พบชีต ' + SHEET.Q_REVIEW);
     return null;
   }
 
   const now   = new Date();
   const newId = generateShortId('R');
 
-  // [FIX v003] เก็บเป็น JSON.stringify([id]) แทน id เดี่ยว
   const candPersonIds = personResult && personResult.personId
     ? JSON.stringify([personResult.personId]) : JSON.stringify([]);
   const candPlaceIds  = placeResult && placeResult.placeId
     ? JSON.stringify([placeResult.placeId])  : JSON.stringify([]);
 
-  // [UPGRADE v5.2.005] รองรับ Tiered Spatial Fuzzy Matching (Multiple Candidates)
   let candGeoIds = JSON.stringify([]);
   if (geoResult) {
     if (geoResult.candidateGeoIds && geoResult.candidateGeoIds.length > 0) {
@@ -98,163 +95,157 @@ function enqueueReview(srcObj, decision, personResult, placeResult, geoResult) {
   }
 
   const newRow = new Array(SCHEMA[SHEET.Q_REVIEW].length).fill('');
-
   newRow[REVIEW_IDX.REVIEW_ID]     = newId;
   newRow[REVIEW_IDX.ISSUE_TYPE]    = decision ? decision.reason    : 'UNKNOWN';
   newRow[REVIEW_IDX.PRIORITY]      = decision ? (decision.priority || 2) : 2;
-  newRow[REVIEW_IDX.SOURCE_REC_ID] = srcObj.sourceId   || '';
-  newRow[REVIEW_IDX.SOURCE_ROW]    = srcObj.sourceRow  || 0;
-  newRow[REVIEW_IDX.INVOICE_NO]    = srcObj.invoiceNo  || '';
+  newRow[REVIEW_IDX.SOURCE_REC_ID] = srcObj.sourceId  || '';
+  newRow[REVIEW_IDX.SOURCE_ROW]    = srcObj.sourceRow || 0;
+  newRow[REVIEW_IDX.INVOICE_NO]    = srcObj.invoiceNo || '';
   newRow[REVIEW_IDX.RAW_PERSON]    = srcObj.rawPersonName || '';
 
-  // [UPGRADE v5.2.003] ซ่อมแซมชื่อสถานที่ใน Review Queue (Hierarchical)
-  // ให้ความสำคัญกับชื่อของลูกค้า (SCG) แต่เติมส่วนที่ขาดจาก LatLong (System)
   let rawPlace = srcObj.rawPlaceName || '';
-  const rawAddr = srcObj.rawAddress || '';
-  
-  // แกะข้อมูลที่ซ่อมแล้ว (Hierarchical: SCG -> System -> Dictionary)
-  const enrich = getEnrichedGeoData(rawAddr, rawPlace);
-  
+  const rawAddr  = srcObj.rawAddress   || '';
+  const enrich   = getEnrichedGeoData(rawAddr, rawPlace);
   if (enrich.fullAddress) {
-    // ถ้าชื่อเดิมสั้น หรือไม่มีข้อมูลภูมิศาสตร์ ให้เอาที่อยู่ที่ซ่อมแล้วมาต่อท้าย
     const hasGeoInfo = /จังหวัด|อำเภอ|เขต|ตำบล|แขวง/.test(rawPlace);
     if (rawPlace.length < 10 || !hasGeoInfo) {
-      rawPlace = rawPlace ? `${rawPlace} (${enrich.fullAddress})` : enrich.fullAddress;
+      rawPlace = rawPlace ? rawPlace + ' (' + enrich.fullAddress + ')' : enrich.fullAddress;
     }
   }
 
-  newRow[REVIEW_IDX.RAW_PLACE]     = rawPlace || rawAddr;
-  newRow[REVIEW_IDX.RAW_SYS_ADDR]  = rawAddr;
-  newRow[REVIEW_IDX.RAW_LAT]       = srcObj.rawLat || 0;
-  newRow[REVIEW_IDX.RAW_LNG]       = srcObj.rawLng || 0;
-  newRow[REVIEW_IDX.CAND_PERSONS]  = candPersonIds;
-  newRow[REVIEW_IDX.CAND_PLACES]   = candPlaceIds;
-  newRow[REVIEW_IDX.CAND_GEOS]     = candGeoIds;
-  newRow[REVIEW_IDX.CAND_DESTS]    = JSON.stringify([]);
-  newRow[REVIEW_IDX.MATCH_SCORE]   = decision ? (decision.confidence || 0) : 0;
-  newRow[REVIEW_IDX.RECOMMEND]     = 'MANUAL_REVIEW';
-  newRow[REVIEW_IDX.STATUS]        = 'Pending';
-  newRow[REVIEW_IDX.REVIEWER]      = '';
-  newRow[REVIEW_IDX.REVIEWED_AT]   = '';
-  newRow[REVIEW_IDX.DECISION]      = '';
-  newRow[REVIEW_IDX.NOTE]          = decision ? (decision.reason || '') : '';
+  newRow[REVIEW_IDX.RAW_PLACE]    = rawPlace || rawAddr;
+  newRow[REVIEW_IDX.RAW_SYS_ADDR] = rawAddr;
+  newRow[REVIEW_IDX.RAW_LAT]      = srcObj.rawLat || 0;
+  newRow[REVIEW_IDX.RAW_LNG]      = srcObj.rawLng || 0;
+  newRow[REVIEW_IDX.CAND_PERSONS] = candPersonIds;
+  newRow[REVIEW_IDX.CAND_PLACES]  = candPlaceIds;
+  newRow[REVIEW_IDX.CAND_GEOS]    = candGeoIds;
+  newRow[REVIEW_IDX.CAND_DESTS]   = JSON.stringify([]);
+  newRow[REVIEW_IDX.MATCH_SCORE]  = decision ? (decision.confidence || 0) : 0;
+  newRow[REVIEW_IDX.RECOMMEND]    = 'MANUAL_REVIEW';
+  newRow[REVIEW_IDX.STATUS]       = 'Pending';
+  newRow[REVIEW_IDX.REVIEWER]     = '';
+  newRow[REVIEW_IDX.REVIEWED_AT]  = '';
+  newRow[REVIEW_IDX.DECISION]     = '';
+  newRow[REVIEW_IDX.NOTE]         = decision ? (decision.reason || '') : '';
 
   return { reviewId: newId, rowData: newRow };
 }
 
 // ============================================================
 // SECTION 2: applyAllPendingDecisions
+// [FIX BUG-B2] Time Guard (ป้องกัน Timeout กับ Queue ใหญ่)
+// [FIX BUG-A2] try-catch outer
 // ============================================================
 
-/**
- * applyAllPendingDecisions — ประมวลผลทุก decision ที่รอ
- * [FIX v003] filter 'In_Review' → !== 'Done'
- *            เดิม: เช็ค === 'In_Review' ทำให้ Pending ถูกข้าม
- */
 function applyAllPendingDecisions() {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
-  if (!sheet || sheet.getLastRow() < 2) return;
+  // [FIX BUG-A2] try-catch outer
+  try {
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
+    if (!sheet || sheet.getLastRow() < 2) return;
 
-  const data    = sheet.getRange(2, 1, sheet.getLastRow() - 1,
-                   SCHEMA[SHEET.Q_REVIEW].length).getValues();
-  let processed = 0;
+    // [FIX BUG-B2] Time Guard
+    const startTime = new Date();
+    const timeLimit = AI_CONFIG.TIME_LIMIT_MS || (5 * 60 * 1000);
 
-  for (let i = 0; i < data.length; i++) {
-    const status   = String(data[i][REVIEW_IDX.STATUS]   || '').trim();
-    const decision = String(data[i][REVIEW_IDX.DECISION] || '').trim();
-    const reviewId = String(data[i][REVIEW_IDX.REVIEW_ID]|| '').trim();
+    const data       = sheet.getRange(2, 1, sheet.getLastRow() - 1,
+                        SCHEMA[SHEET.Q_REVIEW].length).getValues();
+    let   processed  = 0;
+    let   timedOut   = false;
 
-    // [FIX v003] ข้ามเฉพาะ Done แทน เช็ค In_Review
-    if (status === 'Done' || !decision) continue;
+    for (let i = 0; i < data.length; i++) {
+      // [FIX BUG-B2] Time Guard ทุก 20 แถว
+      if (i % 20 === 0 && i > 0 && (new Date() - startTime) > timeLimit) {
+        logWarn('ReviewService', 'applyAllPendingDecisions: Time Guard หยุดที่แถว ' + i + '/' + data.length);
+        timedOut = true;
+        break;
+      }
 
-    try {
-      applyReviewDecision(reviewId, decision, data[i]);
-      processed++;
-    } catch (err) {
-      logError('ReviewService',
-        `applyAllPendingDecisions: reviewId ${reviewId} — ${err.message}`);
+      const status   = String(data[i][REVIEW_IDX.STATUS]   || '').trim();
+      const decision = String(data[i][REVIEW_IDX.DECISION] || '').trim();
+      const reviewId = String(data[i][REVIEW_IDX.REVIEW_ID]|| '').trim();
+
+      if (status === 'Done' || !decision) continue;
+
+      try {
+        applyReviewDecision(reviewId, decision, data[i]);
+        processed++;
+      } catch (err) {
+        logError('ReviewService', 'applyAllPendingDecisions row ' + reviewId + ': ' + err.message, err);
+      }
     }
-  }
 
-  logInfo('ReviewService', `applyAllPendingDecisions: ประมวลผล ${processed} รายการ`);
-  return processed;
+    logInfo('ReviewService',
+      'applyAllPendingDecisions: ประมวลผล ' + processed + ' รายการ' +
+      (timedOut ? ' (หยุดก่อนครบ — Time Guard)' : '')
+    );
+
+    if (timedOut) {
+      safeUiAlert_('⚠️ ประมวลผลไป ' + processed + ' รายการ แต่หยุดกลางคันเพราะใกล้ Timeout\nกรุณารันอีกครั้ง');
+    }
+    return processed;
+
+  } catch (err) {
+    logError('ReviewService', 'applyAllPendingDecisions: ' + err.message, err);
+    safeUiAlert_('❌ เกิดข้อผิดพลาด: ' + err.message);
+  }
 }
 
 // ============================================================
 // SECTION 3: applyReviewDecision
+// [FIX BUG-B2] ใช้ updateReviewRowStatus_() แทน 5× setValue
 // ============================================================
 
-/**
- * applyReviewDecision — ประมวลผล Decision จาก Admin
- * [FIX v003] ใช้ REVIEW_IDX.xxx + 1 แทน headers.indexOf (case-sensitive)
- * [FIX v003] {} block scope กัน ES6 const ใน switch
- * [FIX v003] ESCALATE: setValue('Escalated') + return
- */
 function applyReviewDecision(reviewId, decisionVal, rowData) {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
   if (!sheet) return;
 
-  const now      = new Date();
+  const now = new Date();
   let reviewer = 'System';
   try {
     reviewer = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail() || 'Admin';
   } catch (e) {
-    // กรณีไม่มีสิทธิ์เข้าถึง Email (เช่น Simple Trigger)
     reviewer = 'Admin (Auto)';
   }
 
-  // หาแถวใน Q_REVIEW
-  let targetRow  = -1;
-  let rowArr     = rowData;
-
+  // หา targetRow
+  let targetRow = -1;
+  let rowArr    = rowData;
   if (!rowArr) {
     const data = sheet.getRange(2, 1, sheet.getLastRow() - 1,
                   SCHEMA[SHEET.Q_REVIEW].length).getValues();
     for (let i = 0; i < data.length; i++) {
       if (String(data[i][REVIEW_IDX.REVIEW_ID]).trim() === reviewId) {
-        targetRow = i + 2;
-        rowArr    = data[i];
-        break;
+        targetRow = i + 2; rowArr = data[i]; break;
       }
     }
   } else {
-    // หา targetRow ถ้ามี rowData มาแล้ว (เพื่อเขียนกลับถูกแถว)
-    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
-    for (let i = 0; i < data.length; i++) {
-      if (String(data[i][0]).trim() === reviewId) {
-        targetRow = i + 2;
-        break;
-      }
+    const ids = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+    for (let i = 0; i < ids.length; i++) {
+      if (String(ids[i][0]).trim() === reviewId) { targetRow = i + 2; break; }
     }
   }
-
   if (targetRow === -1) {
-    logWarn('ReviewService', `applyReviewDecision: ไม่พบ reviewId ${reviewId}`);
+    logWarn('ReviewService', 'applyReviewDecision: ไม่พบ reviewId ' + reviewId);
     return;
   }
 
-  // [FIX v003] ใช้ REVIEW_IDX.STATUS + 1 แทน headers.indexOf
   switch (decisionVal) {
 
     case 'CREATE_NEW': {
-      // [FIX v003] สร้าง srcObj ที่มี invoiceNo + sourceRow ครบถ้วน
       const rawPerson = String(rowArr[REVIEW_IDX.RAW_PERSON]   || '').trim();
       const rawPlace  = String(rowArr[REVIEW_IDX.RAW_PLACE]    || '').trim();
       const rawAddr   = String(rowArr[REVIEW_IDX.RAW_SYS_ADDR] || '').trim();
       const rawLat    = Number(rowArr[REVIEW_IDX.RAW_LAT]      || 0);
       const rawLng    = Number(rowArr[REVIEW_IDX.RAW_LNG]      || 0);
 
-      // [UPGRADE v5.2.001] Restore missing Date/Time from Source
       const sourceRowIdx = Number(rowArr[REVIEW_IDX.SOURCE_ROW] || 0);
-      let deliveryDate = '';
-      let deliveryTime = '';
-      
+      let deliveryDate = '', deliveryTime = '';
       if (sourceRowIdx > 1) {
         const srcSheet = ss.getSheetByName(SHEET.SOURCE);
         const srcData  = srcSheet.getRange(sourceRowIdx, 1, 1, srcSheet.getLastColumn()).getValues()[0];
-        
         if (srcData[SRC_IDX.DELIVERY_DATE]) {
           try { deliveryDate = new Date(srcData[SRC_IDX.DELIVERY_DATE]).toISOString(); }
           catch(e) { deliveryDate = String(srcData[SRC_IDX.DELIVERY_DATE]); }
@@ -263,88 +254,55 @@ function applyReviewDecision(reviewId, decisionVal, rowData) {
       }
 
       const srcObj = {
-        invoiceNo:     normalizeInvoiceNo(rowArr[REVIEW_IDX.INVOICE_NO]),
-        sourceRow:     sourceRowIdx,
-        sourceId:      String(rowArr[REVIEW_IDX.SOURCE_REC_ID]|| '').trim(),
-        rawPersonName: rawPerson,
-        rawPlaceName:  rawPlace,
-        rawAddress:    rawAddr,
-        rawLat:        rawLat,
-        rawLng:        rawLng,
-        hasGeo:        !isNaN(rawLat) && !isNaN(rawLng) &&
-                       rawLat !== 0   && rawLng !== 0,
-        province:      '',
-        warehouse:     '',
-        driverName:    '',
-        truckLicense:  '',
-        soldToCode:    '',
-        soldToName:    '',
-        carrierCode:   '',
-        carrierName:   '',
-        shipmentNo:    '',
-        deliveryDate:  deliveryDate,
-        deliveryTime:  deliveryTime,
-        sourceSheet:   SHEET.Q_REVIEW,
+        invoiceNo: normalizeInvoiceNo(rowArr[REVIEW_IDX.INVOICE_NO]),
+        sourceRow: sourceRowIdx,
+        sourceId:  String(rowArr[REVIEW_IDX.SOURCE_REC_ID] || '').trim(),
+        rawPersonName: rawPerson, rawPlaceName: rawPlace,
+        rawAddress: rawAddr, rawLat: rawLat, rawLng: rawLng,
+        hasGeo: !isNaN(rawLat) && !isNaN(rawLng) && rawLat !== 0 && rawLng !== 0,
+        province: '', warehouse: '', driverName: '', truckLicense: '',
+        soldToCode: '', soldToName: '', carrierCode: '', carrierName: '',
+        shipmentNo: '', deliveryDate: deliveryDate, deliveryTime: deliveryTime,
+        sourceSheet: SHEET.Q_REVIEW,
       };
 
-      // [FIX v008] ใช้ฟังก์ชันกลางเพื่อแกะที่อยู่ให้ครบถ้วนเหมือนกันทุกจุด
-      const geoEnrich = getEnrichedGeoData(rawAddr, rawPlace);
-
+      const geoEnrich    = getEnrichedGeoData(rawAddr, rawPlace);
       const personResult = resolvePerson(rawPerson);
-      let personId       = personResult.personId;
+      let   personId     = personResult.personId;
       if (!personId) personId = createPerson(personResult.normResult);
 
-      // [FIX v003] resolvePlace ส่ง rawPlace (clean) + rawAddr (dirty) แยกกัน
-      const placeResult  = resolvePlace(rawPlace, rawAddr);
-      let placeId        = placeResult.placeId;
+      const placeResult = resolvePlace(rawPlace, rawAddr);
+      let   placeId     = placeResult.placeId;
       if (!placeId) {
-        // [UPGRADE v5.2.001] ใช้ fullAddress ที่ซ่อมแล้วจาก geoEnrich
         const placeNorm = placeResult.normResult || {};
         if (geoEnrich.fullAddress) placeNorm.fullAddress = geoEnrich.fullAddress;
-
-        placeId = createPlace(
-          placeNorm, 
-          geoEnrich.province, 
-          geoEnrich.district, 
-          geoEnrich.subDistrict, 
-          geoEnrich.postcode
-        );
+        placeId = createPlace(placeNorm, geoEnrich.province, geoEnrich.district,
+                              geoEnrich.subDistrict, geoEnrich.postcode);
       }
 
       let geoId = null;
       if (srcObj.hasGeo) {
         const geoResult = resolveGeo(rawLat, rawLng);
         geoId = geoResult.geoId;
-        // [FIX v008] ส่งข้อมูลภูมิศาสตร์ที่แกะได้ให้ createGeoPoint (แก้ตัวแปรผิด)
         if (!geoId) {
-          // [FIX v008] ซ่อมเฉพาะคอลัมน์ 24 สำหรับพิกัด (Case 2)
           const geoOnlyEnrich = getEnrichedGeoData(rawAddr, '');
-          geoId = createGeoPoint(
-            rawLat, rawLng, 'manual', 
-            geoOnlyEnrich.fullAddress || rawAddr, 
-            geoOnlyEnrich.province    || geoEnrich.province, 
-            geoOnlyEnrich.district    || geoEnrich.district,
-            placeId // [NEW v5.2.008] ส่งเพื่อทำ Fallback ถ้าเป็น Plus Code
-          );
+          geoId = createGeoPoint(rawLat, rawLng, 'manual',
+            geoOnlyEnrich.fullAddress || rawAddr,
+            geoOnlyEnrich.province || geoEnrich.province,
+            geoOnlyEnrich.district || geoEnrich.district, placeId);
         }
       }
 
       let destId = null;
       if (geoId && (personId || placeId)) {
-        destId = createDestination(personId, placeId, geoId,
-                                   rawLat, rawLng, null);
+        destId = createDestination(personId, placeId, geoId, rawLat, rawLng, null);
       }
 
-      // [FIX v004] แก้ไข Note จาก INVALID_LATLNG เป็น REVIEW_APPROVED
       upsertFactDelivery(srcObj, personId, placeId, geoId, destId,
         { action: 'CREATE_NEW', reason: 'REVIEW_APPROVED', confidence: 95, priority: 0 });
 
-      // อัปเดต Q_REVIEW status
-      sheet.getRange(targetRow, REVIEW_IDX.STATUS      + 1).setValue('Done');
-      sheet.getRange(targetRow, REVIEW_IDX.REVIEWER    + 1).setValue(reviewer);
-      sheet.getRange(targetRow, REVIEW_IDX.REVIEWED_AT + 1).setValue(now);
-      sheet.getRange(targetRow, REVIEW_IDX.DECISION    + 1).setValue(decisionVal);
-      sheet.getRange(targetRow, REVIEW_IDX.NOTE        + 1).setValue('Resolved (Created New)');
+      // [FIX BUG-B2] 1 setValues แทน 5× setValue
+      updateReviewRowStatus_(sheet, targetRow, 'Done', reviewer, now, decisionVal, 'Resolved (Created New)');
       break;
     }
 
@@ -352,7 +310,6 @@ function applyReviewDecision(reviewId, decisionVal, rowData) {
       const rawPerson     = String(rowArr[REVIEW_IDX.RAW_PERSON] || '').trim();
       const candPersonStr = String(rowArr[REVIEW_IDX.CAND_PERSONS] || '[]').trim();
       let   candPersonIds = [];
-
       try { candPersonIds = JSON.parse(candPersonStr); } catch(e) {}
 
       if (candPersonIds.length > 0) {
@@ -361,99 +318,112 @@ function applyReviewDecision(reviewId, decisionVal, rowData) {
           mergePersonRecords(personResult.personId, candPersonIds[0]);
         }
       }
-
-      sheet.getRange(targetRow, REVIEW_IDX.STATUS      + 1).setValue('Done');
-      sheet.getRange(targetRow, REVIEW_IDX.REVIEWER    + 1).setValue(reviewer);
-      sheet.getRange(targetRow, REVIEW_IDX.REVIEWED_AT + 1).setValue(now);
-      sheet.getRange(targetRow, REVIEW_IDX.DECISION    + 1).setValue(decisionVal);
+      // [FIX BUG-B2] 1 setValues
+      updateReviewRowStatus_(sheet, targetRow, 'Done', reviewer, now, decisionVal, '');
       break;
     }
 
     case 'ESCALATE': {
-      // [FIX v003] setValue('Escalated') แล้ว return ทันที
-      sheet.getRange(targetRow, REVIEW_IDX.STATUS      + 1).setValue('Escalated');
-      sheet.getRange(targetRow, REVIEW_IDX.REVIEWER    + 1).setValue(reviewer);
-      sheet.getRange(targetRow, REVIEW_IDX.REVIEWED_AT + 1).setValue(now);
-      sheet.getRange(targetRow, REVIEW_IDX.DECISION    + 1).setValue(decisionVal);
-      logInfo('ReviewService', `reviewId ${reviewId} → Escalated`);
-      return; 
+      // [FIX BUG-B2] 1 setValues
+      updateReviewRowStatus_(sheet, targetRow, 'Escalated', reviewer, now, decisionVal, '');
+      logInfo('ReviewService', 'reviewId ' + reviewId + ' → Escalated');
+      return;
     }
 
     case 'IGNORE': {
-      sheet.getRange(targetRow, REVIEW_IDX.STATUS      + 1).setValue('Done');
-      sheet.getRange(targetRow, REVIEW_IDX.REVIEWER    + 1).setValue(reviewer);
-      sheet.getRange(targetRow, REVIEW_IDX.REVIEWED_AT + 1).setValue(now);
-      sheet.getRange(targetRow, REVIEW_IDX.DECISION    + 1).setValue(decisionVal);
+      // [FIX BUG-B2] 1 setValues
+      updateReviewRowStatus_(sheet, targetRow, 'Done', reviewer, now, decisionVal, '');
       break;
     }
 
     default:
-      logWarn('ReviewService', `applyReviewDecision: Unknown decision ${decisionVal}`);
+      logWarn('ReviewService', 'applyReviewDecision: Unknown decision ' + decisionVal);
       break;
   }
 
-  logInfo('ReviewService',
-    `applyReviewDecision: ${reviewId} → ${decisionVal} โดย ${reviewer}`);
+  logInfo('ReviewService', 'applyReviewDecision: ' + reviewId + ' → ' + decisionVal + ' โดย ' + reviewer);
 }
 
-
 // ============================================================
-// SECTION 4: Stats & Report
+// SECTION 3.5: updateReviewRowStatus_ [NEW BUG-B2 Helper]
+// รวม 5× getRange().setValue() → 1× getRange().setValues()
+// ลด 5 API calls → 1 API call ต่อ decision
 // ============================================================
 
 /**
- * getReviewStats — ดึงสถิติ Q_REVIEW
+ * updateReviewRowStatus_ — Batch update status columns ใน Q_REVIEW
+ * [NEW v5.4.003] แทนที่ 5× setValue ที่กระจายใน applyReviewDecision()
  */
+function updateReviewRowStatus_(sheet, targetRow, status, reviewer, now, decisionVal, note) {
+  // อ่าน block คอลัมน์ที่ต้องอัปเดต (STATUS ถึง NOTE เป็น consecutive range)
+  const minCol = Math.min(
+    REVIEW_IDX.STATUS, REVIEW_IDX.REVIEWER, REVIEW_IDX.REVIEWED_AT,
+    REVIEW_IDX.DECISION, REVIEW_IDX.NOTE
+  ) + 1; // 1-based
+
+  const maxCol = Math.max(
+    REVIEW_IDX.STATUS, REVIEW_IDX.REVIEWER, REVIEW_IDX.REVIEWED_AT,
+    REVIEW_IDX.DECISION, REVIEW_IDX.NOTE
+  ) + 1; // 1-based
+
+  const numCols = maxCol - minCol + 1;
+  const range   = sheet.getRange(targetRow, minCol, 1, numCols);
+  const vals    = range.getValues()[0];  // อ่าน 1 ครั้ง
+
+  // แก้ค่าใน RAM (0-based relative offset)
+  vals[REVIEW_IDX.STATUS      - (minCol - 1)] = status;
+  vals[REVIEW_IDX.REVIEWER    - (minCol - 1)] = reviewer;
+  vals[REVIEW_IDX.REVIEWED_AT - (minCol - 1)] = now;
+  vals[REVIEW_IDX.DECISION    - (minCol - 1)] = decisionVal;
+  vals[REVIEW_IDX.NOTE        - (minCol - 1)] = note || '';
+
+  range.setValues([vals]);  // ✅ 1 write API call
+}
+
+// ============================================================
+// SECTION 4: Stats & Report (ไม่เปลี่ยน)
+// ============================================================
+
 function getReviewStats() {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
   const stats = { pending: 0, done: 0, escalated: 0, total: 0 };
-
   if (!sheet || sheet.getLastRow() < 2) return stats;
 
-  const statusCol = REVIEW_IDX.STATUS + 1;
-  const totalRows = sheet.getLastRow() - 1;
+  const statusCol  = REVIEW_IDX.STATUS + 1;
+  const totalRows  = sheet.getLastRow() - 1;
   const statusData = sheet.getRange(2, statusCol, totalRows, 1).getValues();
 
   statusData.forEach(r => {
     const s = String(r[0] || '').trim();
     stats.total++;
-    if (s === 'Done')       stats.done++;
+    if (s === 'Done')           stats.done++;
     else if (s === 'Escalated') stats.escalated++;
-    else                    stats.pending++;
+    else                        stats.pending++;
   });
-
   return stats;
 }
 
-/**
- * highlightHighPriorityReviews — ทาสีแถว Priority สูงใน Q_REVIEW
- * [NOTE] ปรับเป็น batch collect ranges แล้ว setBackground ทีเดียว
- */
 function highlightHighPriorityReviews() {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.Q_REVIEW);
   if (!sheet || sheet.getLastRow() < 2) return;
 
-  const totalRows   = sheet.getLastRow() - 1;
-  const totalCols   = SCHEMA[SHEET.Q_REVIEW].length;
-  const data        = sheet.getRange(2, 1, totalRows, totalCols).getValues();
-  const bgColors    = [];
+  const totalRows = sheet.getLastRow() - 1;
+  const totalCols = SCHEMA[SHEET.Q_REVIEW].length;
+  const data      = sheet.getRange(2, 1, totalRows, totalCols).getValues();
+  const bgColors  = [];
 
   data.forEach(row => {
     const priority = Number(row[REVIEW_IDX.PRIORITY] || 0);
     const status   = String(row[REVIEW_IDX.STATUS]   || '').trim();
-    let color      = null;
-
-    if (status === 'Done')      color = '#d9ead3';
-    else if (priority >= 3)    color = '#f4cccc';
-    else if (priority === 2)   color = '#fff2cc';
-    else                       color = null;
-
+    let color = null;
+    if (status === 'Done')    color = '#d9ead3';
+    else if (priority >= 3)   color = '#f4cccc';
+    else if (priority === 2)  color = '#fff2cc';
     bgColors.push(Array(totalCols).fill(color));
   });
 
-  // [RULE 4] Batch setBackgrounds ทีเดียว ไม่ loop setBackground
   sheet.getRange(2, 1, totalRows, totalCols).setBackgrounds(bgColors);
-  logDebug('ReviewService', `highlightHighPriorityReviews: ${totalRows} แถว`);
+  logDebug('ReviewService', 'highlightHighPriorityReviews: ' + totalRows + ' แถว');
 }
