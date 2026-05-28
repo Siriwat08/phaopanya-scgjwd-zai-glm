@@ -70,15 +70,17 @@
  * [FIX v003] totalFact กรอง Active rows เท่านั้น
  * [FIX v003] เพิ่ม unclassifiedCount
  * [FIX v003] guard ui.alert() กัน Trigger Error
+ * [FIX BUG-A2] v5.4.003: เพิ่ม try-catch outer
  */
-function buildFullQualityReport() {
-  const ss       = SpreadsheetApp.getActiveSpreadsheet();
-  const rptSheet = ss.getSheetByName(SHEET.RPT_QUALITY);
 
-  if (!rptSheet) {
-    logError('ReportService', `ไม่พบชีต ${SHEET.RPT_QUALITY}`);
-    return;
-  }
+function buildFullQualityReport() {
+  try {
+    const ss       = SpreadsheetApp.getActiveSpreadsheet();
+    const rptSheet = ss.getSheetByName(SHEET.RPT_QUALITY);
+    if (!rptSheet) {
+      logError('ReportService', 'ไม่พบชีต ' + SHEET.RPT_QUALITY);
+      return;
+    }
 
   // --- นับจาก FACT_DELIVERY (Active rows เท่านั้น) ---
   const factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
@@ -191,6 +193,10 @@ function buildFullQualityReport() {
     `  Geo:     ${geoCount}\n` +
     `  Dest:    ${destCount}`
   );
+} catch (err) {
+    logError('ReportService', 'buildFullQualityReport: ' + err.message, err);
+    safeUiAlert_('❌ สร้างรายงานล้มเหลว: ' + err.message);
+  }
 }
 
 // ============================================================
