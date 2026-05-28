@@ -2,6 +2,8 @@
  * VERSION: 5.4.001
  * FILE: 19_Hardening.gs
  * LMDS V5.4 — System Hardening & Preflight Audit
+ * [FIX BUG-A2] v5.4.003: runPreflightAudit() เพิ่ม try-catch
+ * [ADD v5.4.003] buildGlobalAliasDedupSet_() — helper ที่ generatePersonAliasesFromHistory ต้องใช้
  * ===================================================
  * PURPOSE:
  *   ตรวจสอบความสมบูรณ์ของข้อมูลก่อนประมวลผล (Preflight Audit)
@@ -67,135 +69,178 @@
  * ===================================================
  */
 
-/**
- * runPreflightAudit — [MAIN] ตรวจสอบความพร้อมของระบบก่อนรัน Pipeline
- */
+// ============================================================
+// SECTION 1: runPreflightAudit
+// [FIX BUG-A2] เพิ่ม try-catch outer
+// ============================================================
+
 function runPreflightAudit() {
-  const ui = SpreadsheetApp.getUi();
-  const logs = [];
-  let errorCount = 0;
+  // [FIX BUG-A2] try-catch ครอบ
+  try {
+    const ui   = SpreadsheetApp.getUi();
+    const logs = [];
 
-  logInfo('Hardening', 'เริ่มรัน Preflight Audit');
+    logInfo('Hardening', 'เริ่มรัน Preflight Audit');
 
-  // 1. Check Sheets & Schema
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  Object.keys(SHEET).forEach(key => {
-    const sheetName = SHEET[key];
-    const sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      logs.push(`❌ ไม่พบชีต: ${sheetName}`);
-      errorCount++;
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    Object.keys(SHEET).forEach(key => {
+      const sheetName = SHEET[key];
+      const sheet     = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        logs.push('❌ ไม่พบชีต: ' + sheetName);
+      } else {
+        const expectedCols = SCHEMA[sheetName] ? SCHEMA[sheetName].length : 0;
+        if (expectedCols > 0 && sheet.getLastColumn() < expectedCols) {
+          logs.push('⚠️ ชีต ' + sheetName + ' มีคอลัมน์น้อยกว่า Schema (' +
+                    sheet.getLastColumn() + '/' + expectedCols + ')');
+        }
+      }
+    });
+
+    const props = PropertiesService.getScriptProperties().getProperties();
+    if (!props.GEMINI_API_KEY) {
+      logs.push('⚠️ ยังไม่ได้ตั้งค่า GEMINI_API_KEY');
+    }
+
+    const srcSheet = ss.getSheetByName(SHEET.SOURCE);
+    if (srcSheet) {
+      const lastRow = srcSheet.getLastRow();
+      if (lastRow > 1) {
+        const statusCol  = SRC_IDX.SYNC_STATUS + 1;
+        const statusData = srcSheet.getRange(2, statusCol, lastRow - 1, 1).getValues();
+        const emptyCount = statusData.filter(r => !r[0]).length;
+        if (emptyCount > 0) {
+          logs.push('ℹ️ พบแถวที่ไม่มีสถานะ Sync ใน Source: ' + emptyCount + ' แถว');
+        }
+      }
+    }
+
+    if (logs.length === 0) {
+      ui.alert('✅ Preflight Audit: ระบบพร้อมทำงาน 100%');
     } else {
-      // Check column count vs Schema
-      const expectedCols = SCHEMA[sheetName] ? SCHEMA[sheetName].length : 0;
-      if (expectedCols > 0 && sheet.getLastColumn() < expectedCols) {
-        logs.push(`⚠️ ชีต ${sheetName} มีคอลัมน์น้อยกว่า Schema (${sheet.getLastColumn()}/${expectedCols})`);
-      }
+      ui.alert('📊 ผลการตรวจสอบ Preflight Audit:\n\n' +
+               logs.join('\n') +
+               '\n\nพบจุดที่ควรตรวจสอบ ' + logs.length + ' รายการ');
     }
-  });
 
-  // 2. Check Script Properties
-  const props = PropertiesService.getScriptProperties().getProperties();
-  if (!props.GEMINI_API_KEY) {
-    logs.push('⚠️ ยังไม่ได้ตั้งค่า GEMINI_API_KEY');
-  }
-
-  // 3. Check Sync Status Integrity
-  const srcSheet = ss.getSheetByName(SHEET.SOURCE);
-  if (srcSheet) {
-    const lastRow = srcSheet.getLastRow();
-    if (lastRow > 1) {
-      const statusCol = SRC_IDX.SYNC_STATUS + 1;
-      const statusData = srcSheet.getRange(2, statusCol, lastRow - 1, 1).getValues();
-      const emptyCount = statusData.filter(r => !r[0]).length;
-      if (emptyCount > 0) {
-        logs.push(`ℹ️ พบแถวที่ไม่มีสถานะ Sync ใน Source: ${emptyCount} แถว (ระบบจะถือว่าเป็น Pending)`);
-      }
-    }
-  }
-
-  // Show Results
-  if (logs.length === 0) {
-    ui.alert('✅ Preflight Audit: ระบบพร้อมทำงาน 100%');
-  } else {
-    const report = logs.join('\n');
-    ui.alert(`📊 ผลการตรวจสอบ Preflight Audit:\n\n${report}\n\nพบจุดที่ควรตรวจสอบ ${logs.length} รายการ`);
+  } catch (err) {
+    logError('Hardening', 'runPreflightAudit: ' + err.message, err);
+    safeUiAlert_('❌ Preflight Audit ล้มเหลว: ' + err.message);
   }
 }
 
-/**
- * fixMissingSyncStatus — เติมค่า PENDING ให้แถวที่ว่างใน Source
- */
+// ============================================================
+// SECTION 2: fixMissingSyncStatus (ไม่เปลี่ยน)
+// ============================================================
+
 function fixMissingSyncStatus() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName(SHEET.SOURCE);
   if (!sheet) return;
-
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
 
   const statusCol = SRC_IDX.SYNC_STATUS + 1;
-  const range = sheet.getRange(2, statusCol, lastRow - 1, 1);
-  const data = range.getValues();
-  let fixed = 0;
+  const range     = sheet.getRange(2, statusCol, lastRow - 1, 1);
+  const data      = range.getValues();
+  let   fixed     = 0;
 
   for (let i = 0; i < data.length; i++) {
-    if (!data[i][0]) {
-      data[i][0] = 'PENDING';
-      fixed++;
-    }
+    if (!data[i][0]) { data[i][0] = 'PENDING'; fixed++; }
   }
-
   if (fixed > 0) {
     range.setValues(data);
-    SpreadsheetApp.getActiveSpreadsheet().toast(`✅ ซ่อมแซมสถานะ Sync สำเร็จ: ${fixed} แถว`, 'Hardening');
+    SpreadsheetApp.getActiveSpreadsheet()
+      .toast('✅ ซ่อมแซมสถานะ Sync สำเร็จ: ' + fixed + ' แถว', 'Hardening');
   }
 }
 
-/**
- * detectDoubleProcessing — ตรวจสอบข้อมูลซ้ำใน FACT_DELIVERY
- */
+// ============================================================
+// SECTION 3: detectDoubleProcessing (ไม่เปลี่ยน)
+// ============================================================
+
 function detectDoubleProcessing() {
   try {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
-  if (!sheet || sheet.getLastRow() < 2) return;
+    const ss    = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
+    if (!sheet || sheet.getLastRow() < 2) return;
 
-  const invoiceData = sheet.getRange(2, FACT_IDX.INVOICE_NO + 1, sheet.getLastRow() - 1, 1).getValues();
-  const counts = {};
-  const duplicates = [];
+    const invoiceData = sheet.getRange(
+      2, FACT_IDX.INVOICE_NO + 1, sheet.getLastRow() - 1, 1
+    ).getValues();
+    const counts     = {};
+    const duplicates = [];
 
-  invoiceData.forEach(r => {
-    const inv = normalizeInvoiceNo(r[0]);
-    if (!inv) return;
-    counts[inv] = (counts[inv] || 0) + 1;
-  });
+    invoiceData.forEach(r => {
+      const inv = normalizeInvoiceNo(r[0]);
+      if (!inv) return;
+      counts[inv] = (counts[inv] || 0) + 1;
+    });
+    Object.keys(counts).forEach(inv => {
+      if (counts[inv] > 1) duplicates.push(inv + ' (' + counts[inv] + ' ครั้ง)');
+    });
 
-  Object.keys(counts).forEach(inv => {
-    if (counts[inv] > 1) duplicates.push(`${inv} (${counts[inv]} ครั้ง)`);
-  });
-
-  if (duplicates.length === 0) {
-    SpreadsheetApp.getUi().alert('✅ ไม่พบข้อมูลซ้ำใน FACT_DELIVERY');
-  } else {
-    SpreadsheetApp.getUi().alert(`⚠️ พบ Invoice ซ้ำ ${duplicates.length} รายการ:\n\n${duplicates.slice(0, 10).join('\n')}${duplicates.length > 10 ? '\n...และอื่นๆ' : ''}`);
-  }
+    if (duplicates.length === 0) {
+      SpreadsheetApp.getUi().alert('✅ ไม่พบข้อมูลซ้ำใน FACT_DELIVERY');
+    } else {
+      SpreadsheetApp.getUi().alert(
+        '⚠️ พบ Invoice ซ้ำ ' + duplicates.length + ' รายการ:\n\n' +
+        duplicates.slice(0, 10).join('\n') +
+        (duplicates.length > 10 ? '\n...และอื่นๆ' : '')
+      );
+    }
   } catch (err) {
     logError('Hardening', err.message + '\n' + err.stack);
     SpreadsheetApp.getUi().alert('เกิดข้อผิดพลาด: ' + err.message);
   }
 }
 
+// ============================================================
+// SECTION 4: buildGlobalAliasDedupSet_ [NEW v5.4.003]
+// Helper สำหรับ generatePersonAliasesFromHistory
+// โหลด M_ALIAS ครั้งเดียว → คืน Set สำหรับ dedup check
+// ============================================================
+
+/**
+ * buildGlobalAliasDedupSet_ — โหลด M_ALIAS เป็น dedup Set
+ * Format key: "ENTITY_TYPE::masterUuid::normalizedVariant"
+ * @return {Set<string>}
+ */
+function buildGlobalAliasDedupSet_() {
+  const dedupSet = new Set();
+  try {
+    const ss         = SpreadsheetApp.getActiveSpreadsheet();
+    const mAliasSheet = ss.getSheetByName(SHEET.M_ALIAS);
+    if (!mAliasSheet || mAliasSheet.getLastRow() < 2) return dedupSet;
+
+    const data = mAliasSheet.getRange(
+      2, 1, mAliasSheet.getLastRow() - 1, SCHEMA[SHEET.M_ALIAS].length
+    ).getValues();
+
+    data.forEach(function(row) {
+      if (row[ALIAS_IDX.ACTIVE_FLAG] !== true) return;
+      const eType = String(row[ALIAS_IDX.ENTITY_TYPE] || '');
+      const mUuid = String(row[ALIAS_IDX.MASTER_UUID]  || '');
+      const norm  = normalizeForCompare(row[ALIAS_IDX.VARIANT_NAME]);
+      if (eType && mUuid && norm) {
+        dedupSet.add(eType + '::' + mUuid + '::' + norm);
+      }
+    });
+  } catch (err) {
+    logWarn('Hardening', 'buildGlobalAliasDedupSet_: ' + err.message);
+  }
+  return dedupSet;
+}
 
 // ============================================================
-// [BUG-B1 REWRITE] generatePersonAliasesFromHistory
-// FIX: รวบ global alias rows ใน array แล้ว batch write ครั้งเดียว
-//      แทน createGlobalAlias() ใน forEach (O(N²) → O(N))
+// SECTION 5: generatePersonAliasesFromHistory (ไม่เปลี่ยน logic)
+// ใช้ buildGlobalAliasDedupSet_() ที่นิยามแล้วใน Section 4
 // ============================================================
+
 function generatePersonAliasesFromHistory() {
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var factSheet = ss.getSheetByName(SHEET.FACT_DELIVERY);
+    var ss         = SpreadsheetApp.getActiveSpreadsheet();
+    var factSheet  = ss.getSheetByName(SHEET.FACT_DELIVERY);
     var aliasSheet = ss.getSheetByName(SHEET.M_PERSON_ALIAS);
     if (!factSheet || !aliasSheet) {
       SpreadsheetApp.getUi().alert('❌ ไม่พบชีต FACT_DELIVERY หรือ M_PERSON_ALIAS');
@@ -210,60 +255,55 @@ function generatePersonAliasesFromHistory() {
 
     ss.toast('กำลังวิเคราะห์ประวัติการจัดส่งเพื่อสร้าง Alias...', 'Processing', 5);
 
-    var factData = factSheet.getRange(2, 1, factRows - 1, SCHEMA[SHEET.FACT_DELIVERY].length).getValues();
+    var factData = factSheet.getRange(
+      2, 1, factRows - 1, SCHEMA[SHEET.FACT_DELIVERY].length
+    ).getValues();
 
-    // โหลด Person Map (canonical + uuid)
-    var allPersons = loadAllPersons_();
+    // โหลด Person Map
+    var allPersons        = loadAllPersons_();
     var personCanonicalMap = new Map();
-    var personUuidMap = new Map();
+    var personUuidMap      = new Map();
     allPersons.forEach(function(p) {
-      if (p.personId && p.canonical) {
-        personCanonicalMap.set(p.personId, normalizeForCompare(p.canonical));
-      }
-      if (p.personId && p.masterUuid) {
-        personUuidMap.set(p.personId, p.masterUuid);
-      }
+      if (p.personId && p.canonical)   personCanonicalMap.set(p.personId, normalizeForCompare(p.canonical));
+      if (p.personId && p.masterUuid)  personUuidMap.set(p.personId, p.masterUuid);
     });
 
     // โหลด M_PERSON_ALIAS dedup set
-    var existingAliasSet = new Set();
+    var existingAliasSet  = new Set();
     var existingAliasData = loadAllAliases_();
     existingAliasData.forEach(function(r) {
       if (!r[PERSON_ALIAS_IDX.ACTIVE_FLAG]) return;
-      var pId  = String(r[PERSON_ALIAS_IDX.PERSON_ID] || '').trim();
+      var pId   = String(r[PERSON_ALIAS_IDX.PERSON_ID]  || '').trim();
       var aNorm = normalizeForCompare(r[PERSON_ALIAS_IDX.ALIAS_NAME]);
       if (pId && aNorm) existingAliasSet.add(pId + '::' + aNorm);
     });
 
-    // [BUG-B1 FIX] โหลด M_ALIAS dedup set ครั้งเดียวผ่าน helper
+    // [FIX BUG-B1] buildGlobalAliasDedupSet_ โหลด M_ALIAS ครั้งเดียว
     var existingGlobalAliasSet = buildGlobalAliasDedupSet_();
 
-    var newAliasRows   = [];  // สำหรับ M_PERSON_ALIAS
-    var newGlobalRows  = [];  // สำหรับ M_ALIAS
-    var now = new Date();
+    var newAliasRows  = [];   // M_PERSON_ALIAS
+    var newGlobalRows = [];   // M_ALIAS
+    var now           = new Date();
 
     factData.forEach(function(r) {
       var pId     = String(r[FACT_IDX.PERSON_ID]   || '').trim();
       var rawName = String(r[FACT_IDX.SHIP_TO_NAME] || '').trim();
       if (!pId || !rawName) return;
 
-      var rawNorm = normalizeForCompare(rawName);
+      var rawNorm      = normalizeForCompare(rawName);
       if (!rawNorm || rawNorm.length < 2) return;
 
-      // ข้ามถ้าชื่อดิบตรงกับ canonical อยู่แล้ว
       var canonicalNorm = personCanonicalMap.get(pId);
       if (canonicalNorm && canonicalNorm === rawNorm) return;
 
-      // M_PERSON_ALIAS — เพิ่ม variant ที่ยังไม่มี
+      // M_PERSON_ALIAS
       var paKey = pId + '::' + rawNorm;
       if (!existingAliasSet.has(paKey)) {
         existingAliasSet.add(paKey);
-        newAliasRows.push([
-          generateShortId('PA'), pId, rawName, 95, now, true
-        ]);
+        newAliasRows.push([generateShortId('PA'), pId, rawName, 95, now, true]);
       }
 
-      // [BUG-B1 FIX] M_ALIAS — collect ลง array แทน createGlobalAlias() ใน loop
+      // M_ALIAS (Batch — ไม่เรียก createGlobalAlias ใน loop)
       var masterUuid = personUuidMap.get(pId);
       if (masterUuid) {
         var globalKey = 'PERSON::' + masterUuid + '::' + rawNorm;
@@ -280,35 +320,33 @@ function generatePersonAliasesFromHistory() {
     // Batch write M_PERSON_ALIAS
     if (newAliasRows.length > 0) {
       aliasSheet.getRange(
-        aliasSheet.getLastRow() + 1, 1,
-        newAliasRows.length, 6
+        aliasSheet.getLastRow() + 1, 1, newAliasRows.length,
+        SCHEMA[SHEET.M_PERSON_ALIAS].length
       ).setValues(newAliasRows);
       invalidateAliasCache_();
     }
 
-    // [BUG-B1 FIX] Batch write M_ALIAS — 1 API call แทน N appendRow
+    // Batch write M_ALIAS
     var globalAliasCount = 0;
     if (newGlobalRows.length > 0) {
       var mAliasSheet = ss.getSheetByName(SHEET.M_ALIAS);
       if (mAliasSheet) {
         mAliasSheet.getRange(
-          mAliasSheet.getLastRow() + 1, 1,
-          newGlobalRows.length, SCHEMA[SHEET.M_ALIAS].length
+          mAliasSheet.getLastRow() + 1, 1, newGlobalRows.length,
+          SCHEMA[SHEET.M_ALIAS].length
         ).setValues(newGlobalRows);
         CacheService.getScriptCache().removeAll(['M_GLOBAL_ALIAS_ALL', 'M_GLOBAL_ALIAS_REVERSE']);
         globalAliasCount = newGlobalRows.length;
       }
     }
 
-    if (newAliasRows.length > 0 || globalAliasCount > 0) {
-      SpreadsheetApp.getUi().alert(
-        '✅ สร้าง Alias อัตโนมัติสำเร็จ!\n' +
-        '- เพิ่มรายชื่อสำรอง: ' + newAliasRows.length + ' รายการลงใน M_PERSON_ALIAS\n' +
-        '- เพิ่ม Global Alias: ' + globalAliasCount + ' รายการลงใน M_ALIAS'
-      );
-    } else {
-      SpreadsheetApp.getUi().alert('ℹ️ ตรวจสอบเรียบร้อย: ข้อมูล Alias อัปเดตถ้วนแล้ว ไม่มีรายการใหม่');
-    }
+    SpreadsheetApp.getUi().alert(
+      (newAliasRows.length > 0 || globalAliasCount > 0)
+        ? '✅ สร้าง Alias สำเร็จ!\n' +
+          '- M_PERSON_ALIAS: ' + newAliasRows.length + ' รายการ\n' +
+          '- M_ALIAS: ' + globalAliasCount + ' รายการ'
+        : 'ℹ️ ตรวจสอบเรียบร้อย: ข้อมูล Alias อัปเดตถ้วนแล้ว'
+    );
 
   } catch (err) {
     logError('Hardening', err.message + '\n' + err.stack);
