@@ -505,60 +505,54 @@ function openReviewQueue() {
 // SECTION 5: System Tools
 // ============================================================
 
+// [FIX BUG-A2] v5.4.003: เพิ่ม try-catch outer
 function checkSystemIntegrity() {
-  const ui     = SpreadsheetApp.getUi();
-  const ss     = SpreadsheetApp.getActiveSpreadsheet();
-  const errors = [];
-  const warns  = [];
-
-  // [FIX v003] เพิ่ม SHEET.SYS_TH_GEO ใน requiredSheets
-  // [NEW v5.4.000] เพิ่ม SHEET.M_ALIAS ใน requiredSheets
-  const requiredSheets = [
-    SHEET.M_PERSON,      SHEET.M_PERSON_ALIAS,
-    SHEET.M_PLACE,       SHEET.M_PLACE_ALIAS,
-    SHEET.M_ALIAS,
-    SHEET.M_GEO_POINT,   SHEET.M_DESTINATION,
-    SHEET.FACT_DELIVERY, SHEET.Q_REVIEW,
-    SHEET.SYS_LOG,       SHEET.SYS_CONFIG,
-    SHEET.SYS_TH_GEO,    // [ADD v003]
-    SHEET.MAPS_CACHE,    SHEET.RPT_QUALITY,
-    SHEET.DAILY_JOB,     SHEET.INPUT,
-    SHEET.EMPLOYEE,      SHEET.SOURCE,
-  ];
-
-  requiredSheets.forEach(name => {
-    if (!ss.getSheetByName(name)) errors.push(`ไม่พบชีต: ${name}`);
-  });
-
   try {
-    const apiKey = PropertiesService.getScriptProperties()
-                                    .getProperty('GEMINI_API_KEY');
-    if (!apiKey) {
-      warns.push('GEMINI_API_KEY ยังไม่ได้ตั้งค่า');
-    } else if (apiKey.length < 20) {
-      warns.push('GEMINI_API_KEY อาจไม่ถูกต้อง');
+    const ui     = SpreadsheetApp.getUi();
+    const ss     = SpreadsheetApp.getActiveSpreadsheet();
+    const errors = [];
+    const warns  = [];
+
+    const requiredSheets = [
+      SHEET.M_PERSON, SHEET.M_PERSON_ALIAS, SHEET.M_PLACE, SHEET.M_PLACE_ALIAS,
+      SHEET.M_ALIAS, SHEET.M_GEO_POINT, SHEET.M_DESTINATION,
+      SHEET.FACT_DELIVERY, SHEET.Q_REVIEW, SHEET.SYS_LOG, SHEET.SYS_CONFIG,
+      SHEET.SYS_TH_GEO, SHEET.MAPS_CACHE, SHEET.RPT_QUALITY,
+      SHEET.DAILY_JOB, SHEET.INPUT, SHEET.EMPLOYEE, SHEET.SOURCE,
+    ];
+
+    requiredSheets.forEach(name => {
+      if (!ss.getSheetByName(name)) errors.push('ไม่พบชีต: ' + name);
+    });
+
+    try {
+      const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+      if (!apiKey)            warns.push('GEMINI_API_KEY ยังไม่ได้ตั้งค่า');
+      else if (apiKey.length < 20) warns.push('GEMINI_API_KEY อาจไม่ถูกต้อง');
+    } catch (e) {
+      warns.push('ไม่สามารถอ่าน GEMINI_API_KEY: ' + e.message);
     }
-  } catch (e) {
-    warns.push('ไม่สามารถอ่าน GEMINI_API_KEY: ' + e.message);
-  }
 
-  if (errors.length === 0 && warns.length === 0) {
-    ui.alert(`✅ System Integrity: ปกติทุกอย่าง!\nVersion: ${APP_VERSION}`);
-    return;
-  }
+    if (errors.length === 0 && warns.length === 0) {
+      ui.alert('✅ System Integrity: ปกติทุกอย่าง!\nVersion: ' + APP_VERSION);
+      return;
+    }
 
-  let msg = '';
-  if (errors.length > 0) {
-    msg += `❌ พบ Error ${errors.length} รายการ:\n`;
-    msg += errors.map(e => '  • ' + e).join('\n');
-    msg += '\n\n💡 รัน เมนู > ระบบ > สร้างชีตทั้งหมด\n\n';
-  }
-  if (warns.length > 0) {
-    msg += `⚠️ พบ Warning ${warns.length} รายการ:\n`;
-    msg += warns.map(w => '  • ' + w).join('\n');
-  }
+    let msg = '';
+    if (errors.length > 0) {
+      msg += '❌ พบ Error ' + errors.length + ' รายการ:\n';
+      msg += errors.map(e => '  • ' + e).join('\n') + '\n\n💡 รัน สร้างชีตทั้งหมด\n\n';
+    }
+    if (warns.length > 0) {
+      msg += '⚠️ พบ Warning ' + warns.length + ' รายการ:\n';
+      msg += warns.map(w => '  • ' + w).join('\n');
+    }
+    ui.alert(msg);
 
-  ui.alert(msg);
+  } catch (err) {
+    logError('App', 'checkSystemIntegrity: ' + err.message, err);
+    safeUiAlert_('❌ checkSystemIntegrity ล้มเหลว: ' + err.message);
+  }
 }
 
 function setupEnvironment() {
@@ -635,8 +629,11 @@ function showVersionInfo() {
  * diagnoseSystemState — วินิจฉัยปัญหา Pipeline แบบครบวงจร
  * ตรวจสอบ: ชีตมีอยู่ไหม, คอลัมน์ครบไหม, ข้อมูลว่างไหม, SYNC_STATUS, Cache, ฯลฯ
  * เรียกจากเมนู: 🔧 ระบบ > 🔍 วินิจฉัย Pipeline (Diagnostic)
+ * [FIX BUG-A2] v5.4.003: เพิ่ม try-catch outer
  */
+
 function diagnoseSystemState() {
+  try {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const lines = [];
@@ -775,4 +772,9 @@ function diagnoseSystemState() {
   }
 
   ui.alert(lines.join('\n'));
+
+  } catch (err) {
+    logError('App', 'diagnoseSystemState: ' + err.message, err);
+    safeUiAlert_('❌ Diagnostic ล้มเหลว: ' + err.message);
+  }
 }
